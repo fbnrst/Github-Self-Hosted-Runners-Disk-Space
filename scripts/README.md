@@ -35,7 +35,7 @@ Metadata files contain:
 ```json
 {
   "architecture": "x86_64",
-  "timestamp": "2026-02-05T13:03:51Z",
+  "timestamp": "2026-02-05",
   "runner": "ubuntu-24.04",
   "total_size": 111179272497,
   "top_entries": [[size, "name", has_children], ...],

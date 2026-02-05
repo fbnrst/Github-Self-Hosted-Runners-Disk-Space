@@ -51,7 +51,7 @@ jobs:
           # Add metadata
           echo "{" > docs/data/${{ inputs.architecture }}.json
           echo "  \"architecture\": \"${{ inputs.architecture }}\"," >> docs/data/${{ inputs.architecture }}.json
-          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          timestamp=$(date -u +%Y-%m-%d)
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/${{ inputs.architecture }}.json
           echo "  \"runner\": \"${{ inputs.runner }}\"," >> docs/data/${{ inputs.architecture }}.json
           echo "  \"total_disk_size\": $total_size," >> docs/data/${{ inputs.architecture }}.json
