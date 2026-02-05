@@ -304,24 +304,45 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        function calculateEntrySize(entry) {
+        function calculateEntrySize(entry, seenInodes = null) {
             // Calculate total size of an NCDU entry recursively
             // In NCDU format, directory metadata contains only the inode size
             // We need to recursively sum all children to get the total size
+            //
+            // Hard links (files with the same inode) are only counted once to avoid
+            // overestimation of disk usage.
+            if (seenInodes === null) {
+                seenInodes = new Set();
+            }
+
             if (typeof entry === 'object' && !Array.isArray(entry)) {
-                // File entry: just return asize + dsize
+                // File entry: check for hard links
+                const ino = entry.ino;
+                if (ino !== undefined) {
+                    // This file has an inode number
+                    if (seenInodes.has(ino)) {
+                        // Already counted this inode (hard link)
+                        return 0;
+                    }
+                    // Mark this inode as seen
+                    seenInodes.add(ino);
+                }
+
+                // Return asize + dsize
                 return (entry.asize || 0) + (entry.dsize || 0);
             } else if (Array.isArray(entry) && entry.length >= 1) {
                 // Entry is [metadata, children...]
                 let totalSize = 0;
                 if (typeof entry[0] === 'object') {
-                    // Add the directory/file's own size (inode)
+                    // Add the directory/file's own size (metadata)
+                    // Note: We don't check inode for directories as they typically don't
+                    // participate in hard linking, and skipping children would be incorrect
                     totalSize += (entry[0].asize || 0) + (entry[0].dsize || 0);
                 }
 
                 // Recursively add all children's sizes
                 for (let i = 1; i < entry.length; i++) {
-                    totalSize += calculateEntrySize(entry[i]);
+                    totalSize += calculateEntrySize(entry[i], seenInodes);
                 }
 
                 return totalSize;
