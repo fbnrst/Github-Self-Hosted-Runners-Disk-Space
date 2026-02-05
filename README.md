@@ -39,15 +39,18 @@ The data collection workflow (`collect-disk-space.yml`) runs weekly to gather di
 
 ### Pages Deployment Workflow
 
-The pages deployment workflow (`deploy-pages.yml`) runs independently:
-- **Trigger**: Automatically on push to `docs/` directory for layout/design changes (data files are excluded since they're in a separate branch)
+The pages deployment workflow (`deploy-pages.yml`) is triggered by:
+- **Automatic**: After the "Collect Disk Space Data" workflow completes successfully
+- **Automatic**: On push to `docs/` directory for layout/design changes (data files are excluded since they're in a separate branch)
+- **Manual**: Via `workflow_dispatch`
 - **Process**: Deploys the `docs/` directory to GitHub Pages
 
-This separation allows you to:
-- Update page layouts without conflicting with data updates
-- Collect data on a scheduled basis without triggering page deployments
-- Make PRs for page design changes without merge conflicts from data updates
-- Keep only the latest data version without history (stored in separate `data` branch)
+This setup ensures that:
+- The GitHub Pages site is automatically updated after new data is collected
+- Page layouts can be updated independently without conflicting with data updates
+- Data collection runs on a schedule without unnecessary page deployments when data hasn't changed
+- PRs for page design changes don't have merge conflicts from data updates
+- Only the latest data version is kept without history (stored in separate `data` branch)
 
 ## Viewing the Reports
 
@@ -74,7 +77,8 @@ The data collection workflow runs automatically:
 - **Schedule**: Every Monday at 00:00 UTC
 
 The pages deployment workflow runs automatically:
-- **Trigger**: On push to `docs/` directory (e.g., when data is updated or layout changes)
+- **After Data Collection**: Triggered automatically when the "Collect Disk Space Data" workflow completes successfully
+- **On Layout Changes**: On push to `docs/` directory (e.g., when layout or design changes are made)
 
 Both workflows can also be manually triggered via `workflow_dispatch` (see "Manual Workflow Trigger" section above).
 
