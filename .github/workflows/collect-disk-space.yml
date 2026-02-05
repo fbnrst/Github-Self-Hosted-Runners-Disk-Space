@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   collect-disk-space-x86:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
           echo "  \"architecture\": \"x86_64\"," >> docs/data/x86_64.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/x86_64.json
-          echo "  \"runner\": \"ubuntu-latest\"," >> docs/data/x86_64.json
+          echo "  \"runner\": \"ubuntu-24.04\"," >> docs/data/x86_64.json
           data=$(cat docs/data/x86_64-raw.json)
           echo "  \"data\": $data" >> docs/data/x86_64.json
           echo "}" >> docs/data/x86_64.json
@@ -47,7 +47,7 @@ jobs:
           path: docs/data/x86_64.json
 
   collect-disk-space-arm64:
-    runs-on: ubuntu-latest-arm64
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
           echo "  \"architecture\": \"aarch64\"," >> docs/data/aarch64.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/aarch64.json
-          runner="ubuntu-latest-arm64"
+          runner="ubuntu-24.04-arm"
           echo "  \"runner\": \"$runner\"," >> docs/data/aarch64.json
           data=$(cat docs/data/aarch64-raw.json)
           echo "  \"data\": $data" >> docs/data/aarch64.json
