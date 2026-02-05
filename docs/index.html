@@ -38,9 +38,76 @@
             font-size: 1.1em;
         }
 
+        .back-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-bottom: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .back-button:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .runner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .runner-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .runner-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .runner-card h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .runner-info {
+            color: #666;
+            font-size: 0.9em;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .runner-info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .runner-info-item::before {
+            content: '•';
+            color: #667eea;
+            font-weight: bold;
+        }
+
         .reports-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            grid-template-columns: 1fr;
             gap: 20px;
             margin-bottom: 20px;
         }
@@ -166,6 +233,10 @@
             margin-top: 20px;
             font-size: 0.9em;
         }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -176,7 +247,16 @@
         <div id="loading" class="loading">Loading disk space reports...</div>
         <div id="error" class="error" style="display: none;"></div>
 
-        <div id="reports" class="reports-container" style="display: none;"></div>
+        <!-- Runner overview page -->
+        <div id="runnerOverview" class="hidden">
+            <div id="runnerGrid" class="runner-grid"></div>
+        </div>
+
+        <!-- Individual runner details page -->
+        <div id="runnerDetails" class="hidden">
+            <a href="#" id="backButton" class="back-button">← Back to Runners</a>
+            <div id="reports" class="reports-container"></div>
+        </div>
 
         <div class="last-updated" id="lastUpdated"></div>
     </div>
@@ -184,6 +264,8 @@
     <script>
         // Cache for full JSON data (lazy loaded)
         const fullDataCache = {};
+        // Store metadata for all runners
+        let allRunnersMetadata = [];
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -429,7 +511,7 @@
             try {
                 const response = await fetch(`data/${architecture}-metadata.json`);
                 if (!response.ok) {
-                    throw new Error(`Failed to load ${architecture} metadata`);
+                    return null;
                 }
                 return await response.json();
             } catch (error) {
@@ -438,94 +520,93 @@
             }
         }
 
-        async function loadReports() {
+        async function discoverAllRunners() {
+            // Try to load metadata for all known runner types
+            const knownRunners = [
+                'x86_64',
+                'x86_64-22.04',
+                'x86_64-slim',
+                'aarch64',
+                'aarch64-22.04'
+            ];
+
+            const runners = [];
+            for (const arch of knownRunners) {
+                const metadata = await loadMetadata(arch);
+                if (metadata) {
+                    runners.push(metadata);
+                }
+            }
+
+            return runners;
+        }
+
+        function showRunnerOverview() {
+            document.getElementById('runnerOverview').classList.remove('hidden');
+            document.getElementById('runnerDetails').classList.add('hidden');
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function showRunnerDetails(architecture) {
+            document.getElementById('runnerOverview').classList.add('hidden');
+            document.getElementById('runnerDetails').classList.remove('hidden');
+            loadRunnerDetails(architecture);
+        }
+
+        async function loadRunnerOverview() {
             const loadingEl = document.getElementById('loading');
             const errorEl = document.getElementById('error');
-            const reportsEl = document.getElementById('reports');
+            const runnerGridEl = document.getElementById('runnerGrid');
             const lastUpdatedEl = document.getElementById('lastUpdated');
 
             try {
-                // Load lightweight metadata files first
-                const [x86Metadata, armMetadata] = await Promise.all([
-                    loadMetadata('x86_64'),
-                    loadMetadata('aarch64')
-                ]);
+                // Discover all available runners
+                allRunnersMetadata = await discoverAllRunners();
 
-                if (!x86Metadata && !armMetadata) {
-                    throw new Error('No reports available. Please wait for the workflow to run.');
+                if (allRunnersMetadata.length === 0) {
+                    throw new Error('No runner reports available. Please wait for the workflow to run.');
                 }
 
-                loadingEl.style.display = 'none';
-                reportsEl.style.display = 'grid';
+                // Clear the grid
+                runnerGridEl.innerHTML = '';
 
                 let latestTimestamp = null;
 
-                // Render each report using metadata
-                [
-                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
-                    { data: armMetadata, title: 'aarch64 (ARM64)' }
-                ].forEach(({ data, title }) => {
-                    if (!data) return;
+                // Create runner cards
+                allRunnersMetadata.forEach(metadata => {
+                    const card = document.createElement('div');
+                    card.className = 'runner-card';
+                    card.onclick = () => showRunnerDetails(metadata.architecture);
 
-                    const reportCard = document.createElement('div');
-                    reportCard.className = 'report-card';
-
-                    const totalSize = data.total_size || 0;
-
-                    if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
-                        latestTimestamp = data.timestamp;
+                    if (!latestTimestamp || new Date(metadata.timestamp) > new Date(latestTimestamp)) {
+                        latestTimestamp = metadata.timestamp;
                     }
 
-                    // Build metadata spans
-                    let metaSpans = `
-                        <span>Runner: ${data.runner}</span>
-                        <span>Updated: ${formatDate(data.timestamp)}</span>
-                        <span id="used-${data.architecture}">Used: ${rootSizeText}</span>
-                    `;
-
-                    // Add total disk size and available space if present
-                    // Note: 'Used' shows disk usage from ncdu, while 'Total Size' and 'Available'
-                    // show the actual disk capacity and free space from df command
-                    if (data.total_disk_size !== undefined) {
-                        metaSpans += `<span>Total Size: ${formatBytes(data.total_disk_size)}</span>`;
-                    }
-                    if (data.available_space !== undefined) {
-                        metaSpans += `<span>Available: ${formatBytes(data.available_space)}</span>`;
+                    // Create a friendly display name
+                    let displayName = metadata.architecture;
+                    if (displayName.includes('x86_64')) {
+                        displayName = displayName.replace('x86_64', 'x86_64 (Intel/AMD)');
+                    } else if (displayName.includes('aarch64')) {
+                        displayName = displayName.replace('aarch64', 'aarch64 (ARM64)');
                     }
 
-                    reportCard.innerHTML = `
-                        <div class="report-header">
-                            <h2>${title}</h2>
-                            <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(totalSize)}</span>
-                            </div>
+                    card.innerHTML = `
+                        <h2>${displayName}</h2>
+                        <div class="runner-info">
+                            <div class="runner-info-item">Runner: ${metadata.runner}</div>
+                            <div class="runner-info-item">Total Size: ${formatBytes(metadata.total_size)}</div>
+                            <div class="runner-info-item">Last Updated: ${formatDate(metadata.timestamp)}</div>
                         </div>
-                        <div class="tree-view" id="tree-${data.architecture}"></div>
                     `;
 
-                    reportsEl.appendChild(reportCard);
-
-                    // Render tree using lightweight metadata
-                    const treeView = document.getElementById(`tree-${data.architecture}`);
-                    const topEntries = data.top_entries || [];
-
-                    topEntries.forEach(entry => {
-                        renderTreeItem(entry, 0, treeView, data.architecture, []);
-                    });
-
-                    if (data.total_entries > topEntries.length) {
-                        const moreDiv = document.createElement('div');
-                        moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
-                        treeView.appendChild(moreDiv);
-                    }
+                    runnerGridEl.appendChild(card);
                 });
 
                 if (latestTimestamp) {
                     lastUpdatedEl.textContent = `Last updated: ${formatDate(latestTimestamp)}`;
                 }
+
+                showRunnerOverview();
 
             } catch (error) {
                 loadingEl.style.display = 'none';
@@ -534,8 +615,74 @@
             }
         }
 
-        // Load reports when page loads
-        loadReports();
+        async function loadRunnerDetails(architecture) {
+            const reportsEl = document.getElementById('reports');
+            const lastUpdatedEl = document.getElementById('lastUpdated');
+
+            // Find metadata for this runner
+            const metadata = allRunnersMetadata.find(m => m.architecture === architecture);
+            if (!metadata) {
+                console.error(`Metadata not found for ${architecture}`);
+                return;
+            }
+
+            // Clear previous content
+            reportsEl.innerHTML = '';
+
+            // Create report card
+            const reportCard = document.createElement('div');
+            reportCard.className = 'report-card';
+
+            const totalSize = metadata.total_size || 0;
+
+            // Create a friendly display name
+            let displayName = metadata.architecture;
+            if (displayName.includes('x86_64')) {
+                displayName = displayName.replace('x86_64', 'x86_64 (Intel/AMD)');
+            } else if (displayName.includes('aarch64')) {
+                displayName = displayName.replace('aarch64', 'aarch64 (ARM64)');
+            }
+
+            reportCard.innerHTML = `
+                <div class="report-header">
+                    <h2>${displayName}</h2>
+                    <div class="report-meta">
+                        <span>Runner: ${metadata.runner}</span>
+                        <span>Updated: ${formatDate(metadata.timestamp)}</span>
+                        <span>Total: ${formatBytes(totalSize)}</span>
+                    </div>
+                </div>
+                <div class="tree-view" id="tree-${metadata.architecture}"></div>
+            `;
+
+            reportsEl.appendChild(reportCard);
+
+            // Render tree using lightweight metadata
+            const treeView = document.getElementById(`tree-${metadata.architecture}`);
+            const topEntries = metadata.top_entries || [];
+            
+            topEntries.forEach(entry => {
+                renderTreeItem(entry, 0, treeView, metadata.architecture, []);
+            });
+
+            if (metadata.total_entries > topEntries.length) {
+                const moreDiv = document.createElement('div');
+                moreDiv.className = 'tree-item';
+                moreDiv.innerHTML = `<em>... ${metadata.total_entries - topEntries.length} more items (expand directories to load)</em>`;
+                treeView.appendChild(moreDiv);
+            }
+
+            lastUpdatedEl.textContent = `Last updated: ${formatDate(metadata.timestamp)}`;
+        }
+
+        // Set up back button
+        document.getElementById('backButton').onclick = (e) => {
+            e.preventDefault();
+            showRunnerOverview();
+        };
+
+        // Load runner overview when page loads
+        loadRunnerOverview();
     </script>
 </body>
 </html>
