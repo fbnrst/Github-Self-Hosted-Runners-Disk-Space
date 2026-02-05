@@ -25,17 +25,21 @@ jobs:
         run: |
           # Create output directory
           mkdir -p disk-reports
-          
+
           # Run ncdu and export to JSON
-          # We'll scan the root directory (excluding some large directories)
-          sudo ncdu / -o disk-reports/x86_64-raw.json -x --exclude /proc --exclude /sys --exclude /dev --exclude /run --exclude /tmp || true
-          
+          # We'll scan the root directory (excluding some large dirs)
+          sudo ncdu / -o disk-reports/x86_64-raw.json -x \
+            --exclude /proc --exclude /sys --exclude /dev \
+            --exclude /run --exclude /tmp || true
+
           # Add metadata
           echo "{" > disk-reports/x86_64.json
           echo "  \"architecture\": \"x86_64\"," >> disk-reports/x86_64.json
-          echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> disk-reports/x86_64.json
+          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "  \"timestamp\": \"$timestamp\"," >> disk-reports/x86_64.json
           echo "  \"runner\": \"ubuntu-latest\"," >> disk-reports/x86_64.json
-          echo "  \"data\": $(cat disk-reports/x86_64-raw.json)" >> disk-reports/x86_64.json
+          data=$(cat disk-reports/x86_64-raw.json)
+          echo "  \"data\": $data" >> disk-reports/x86_64.json
           echo "}" >> disk-reports/x86_64.json
 
       - name: Upload artifact
@@ -57,16 +61,21 @@ jobs:
         run: |
           # Create output directory
           mkdir -p disk-reports
-          
+
           # Run ncdu and export to JSON
-          sudo ncdu / -o disk-reports/aarch64-raw.json -x --exclude /proc --exclude /sys --exclude /dev --exclude /run --exclude /tmp || true
-          
+          sudo ncdu / -o disk-reports/aarch64-raw.json -x \
+            --exclude /proc --exclude /sys --exclude /dev \
+            --exclude /run --exclude /tmp || true
+
           # Add metadata
           echo "{" > disk-reports/aarch64.json
           echo "  \"architecture\": \"aarch64\"," >> disk-reports/aarch64.json
-          echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> disk-reports/aarch64.json
-          echo "  \"runner\": \"ubuntu-latest-arm64\"," >> disk-reports/aarch64.json
-          echo "  \"data\": $(cat disk-reports/aarch64-raw.json)" >> disk-reports/aarch64.json
+          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "  \"timestamp\": \"$timestamp\"," >> disk-reports/aarch64.json
+          runner="ubuntu-latest-arm64"
+          echo "  \"runner\": \"$runner\"," >> disk-reports/aarch64.json
+          data=$(cat disk-reports/aarch64-raw.json)
+          echo "  \"data\": $data" >> disk-reports/aarch64.json
           echo "}" >> disk-reports/aarch64.json
 
       - name: Upload artifact
