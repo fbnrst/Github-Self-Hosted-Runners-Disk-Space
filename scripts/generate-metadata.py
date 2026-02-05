@@ -34,7 +34,7 @@ def get_entry_size(entry, seen_inodes=None):
     - For files: dsize represents the disk usage (allocated blocks)
     - For directories: The metadata dict contains only the directory inode size
       (typically 4096 bytes). The total directory size is the sum of all children.
-    
+
     Hard links (files with the same inode) are only counted once to avoid
     overestimation of disk usage.
 
