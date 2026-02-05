@@ -142,43 +142,7 @@
             display: block;
         }
 
-        .summary {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
-        }
 
-        .summary h2 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
 
         .loading {
             text-align: center;
@@ -211,11 +175,6 @@
 
         <div id="loading" class="loading">Loading disk space reports...</div>
         <div id="error" class="error" style="display: none;"></div>
-
-        <div id="summary" class="summary" style="display: none;">
-            <h2>Summary</h2>
-            <div id="stats" class="stats-grid"></div>
-        </div>
 
         <div id="reports" class="reports-container" style="display: none;"></div>
 
@@ -322,8 +281,6 @@
             const loadingEl = document.getElementById('loading');
             const errorEl = document.getElementById('error');
             const reportsEl = document.getElementById('reports');
-            const summaryEl = document.getElementById('summary');
-            const statsEl = document.getElementById('stats');
             const lastUpdatedEl = document.getElementById('lastUpdated');
 
             try {
@@ -338,10 +295,7 @@
 
                 loadingEl.style.display = 'none';
                 reportsEl.style.display = 'grid';
-                summaryEl.style.display = 'block';
 
-                let totalSize = 0;
-                let reportCount = 0;
                 let latestTimestamp = null;
 
                 // Render each report
@@ -351,13 +305,11 @@
                 ].forEach(({ data, title }) => {
                     if (!data) return;
 
-                    reportCount++;
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
 
                     const entries = parseNcduData(data.data);
                     const rootSize = entries.length > 0 && Array.isArray(entries[0]) ? entries[0][0] : 0;
-                    totalSize += rootSize;
 
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
@@ -390,22 +342,6 @@
                         treeView.appendChild(moreDiv);
                     }
                 });
-
-                // Update summary stats
-                statsEl.innerHTML = `
-                    <div class="stat-box">
-                        <div class="stat-value">${reportCount}</div>
-                        <div class="stat-label">Architectures</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value">${formatBytes(totalSize)}</div>
-                        <div class="stat-label">Total Disk Usage</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-value">${formatBytes(totalSize / reportCount)}</div>
-                        <div class="stat-label">Avg per Runner</div>
-                    </div>
-                `;
 
                 if (latestTimestamp) {
                     lastUpdatedEl.textContent = `Last updated: ${formatDate(latestTimestamp)}`;
