@@ -380,41 +380,39 @@
             // Sort full NCDU entries
             // Full entry format: [{name, asize, dsize}, ...children]
 
+            // ALWAYS calculate all sizes with a shared seenInodes set first
+            // to avoid overestimating when hard links exist between sibling entries
+            const sharedInodes = new Set();
+            const entriesWithSizes = entries.map(entry => ({
+                entry,
+                size: calculateEntrySize(entry, sharedInodes)
+            }));
+
+            // Cache the calculated sizes on the entries themselves
+            entriesWithSizes.forEach(({ entry, size }) => {
+                if (Array.isArray(entry) && entry.length > 0 && typeof entry[0] === 'object') {
+                    entry[0]._cachedSize = size;
+                } else if (typeof entry === 'object') {
+                    entry._cachedSize = size;
+                }
+            });
+
             if (sortOrder === 'name') {
-                const sorted = [...entries];
-                sorted.sort((a, b) => {
-                    const nameA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') ? (a[0].name || '') : '';
-                    const nameB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object') ? (b[0].name || '') : '';
+                entriesWithSizes.sort((a, b) => {
+                    const nameA = (Array.isArray(a.entry) && a.entry.length > 0 && typeof a.entry[0] === 'object') ? (a.entry[0].name || '') : '';
+                    const nameB = (Array.isArray(b.entry) && b.entry.length > 0 && typeof b.entry[0] === 'object') ? (b.entry[0].name || '') : '';
                     return nameA.localeCompare(nameB);
                 });
-                return sorted;
             } else if (sortOrder === 'size') {
-                // Calculate all sizes with a shared seenInodes set to avoid
-                // overestimating sizes when hard links exist between sibling entries
-                const sharedInodes = new Set();
-                const entriesWithSizes = entries.map(entry => ({
-                    entry,
-                    size: calculateEntrySize(entry, sharedInodes)
-                }));
-
                 // Sort by size descending
                 entriesWithSizes.sort((a, b) => b.size - a.size);
-
-                // Cache the calculated sizes on the entries themselves
-                entriesWithSizes.forEach(({ entry, size }) => {
-                    if (Array.isArray(entry) && entry.length > 0 && typeof entry[0] === 'object') {
-                        entry[0]._cachedSize = size;
-                    } else if (typeof entry === 'object') {
-                        entry._cachedSize = size;
-                    }
-                });
-
-                return entriesWithSizes.map(item => item.entry);
             } else {
                 // Default to size sorting for invalid sort orders
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
-                return sortFullEntries(entries, 'size');
+                entriesWithSizes.sort((a, b) => b.size - a.size);
             }
+
+            return entriesWithSizes.map(item => item.entry);
         }
 
         function formatDate(dateString) {
