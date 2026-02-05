@@ -106,11 +106,10 @@ def generate_metadata(input_file, output_file, top_entries=20):
                 metadata["total_size"] = total_size
 
             # Get top N child entries (starting from index 1)
-            # Note: Each entry gets its own seen_inodes set, so sizes represent
-            # the apparent size of each entry independently. This means the sum
-            # of top entries may exceed total_size if there are hard links between
-            # top-level entries, which is expected behavior for showing per-directory stats.
+            # Calculate sizes with a shared seen_inodes set to avoid overestimating
+            # when hard links exist between top-level entries
             top_level_entries = []
+            shared_inodes = set()
             count = 0
             for i in range(1, min(len(root_entry), top_entries + 1)):
                 entry = root_entry[i]
@@ -120,16 +119,16 @@ def generate_metadata(input_file, output_file, top_entries=20):
                     entry_meta = entry[0]
                     if isinstance(entry_meta, dict):
                         name = entry_meta.get('name', 'unknown')
-                        # Each top-level entry gets its own inode set to show independent size
-                        size = get_entry_size(entry)
+                        # Use shared inode set to properly handle hard links
+                        size = get_entry_size(entry, shared_inodes)
                         has_children = len(entry) > 1
                         top_level_entries.append([size, name, has_children])
                         count += 1
                 elif isinstance(entry, dict):
                     # Entry is just metadata (file, not directory)
                     name = entry.get('name', 'unknown')
-                    # Each file gets its own calculation
-                    size = get_entry_size(entry)
+                    # Use shared inode set to properly handle hard links
+                    size = get_entry_size(entry, shared_inodes)
                     top_level_entries.append([size, name, False])
                     count += 1
 
