@@ -92,11 +92,34 @@ jobs:
         run: |
           python3 scripts/generate-metadata.py
 
-      - name: Commit and push reports
+      - name: Commit and push reports to data branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data/*.json
+          
+          # Fetch data branch or create it if it doesn't exist
+          git fetch origin data || true
+          
+          # Check if data branch exists remotely
+          if git ls-remote --heads origin data | grep -q data; then
+            # Data branch exists, check it out
+            git checkout data
+            # Remove all files and copy new data
+            git rm -rf . || true
+            mkdir -p data
+            cp docs/data/*.json data/
+          else
+            # Create new orphan data branch (no history)
+            git checkout --orphan data
+            # Remove all files from staging
+            git rm -rf . || true
+            # Create data directory and copy files
+            mkdir -p data
+            cp docs/data/*.json data/
+          fi
+          
+          # Add and commit the data files
+          git add data/*.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -106,5 +129,5 @@ jobs:
             # including /proc, /sys can generate large files. Consider using --exclude
             # for very large directories if files exceed ~50 MB to stay well under limits.
             git commit -m "Update disk space reports and metadata"
-            git push
+            git push origin data
           fi
