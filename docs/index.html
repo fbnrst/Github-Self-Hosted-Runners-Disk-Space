@@ -624,6 +624,7 @@
                     // Add accessibility attributes
                     reportCard.setAttribute('role', 'button');
                     reportCard.setAttribute('aria-expanded', 'false');
+                    reportCard.setAttribute('aria-label', `Toggle ${runner.title} runner details`);
                     reportCard.setAttribute('tabindex', '0');
 
                     const totalSize = data.total_size || 0;
@@ -651,8 +652,9 @@
 
                     // Add click handler to toggle expansion
                     const toggleCard = function(e) {
-                        // Don't toggle if clicking inside tree view
-                        if (e.target.closest('.tree-view')) {
+                        // Don't toggle if clicking on interactive elements within tree view
+                        const target = e.target;
+                        if (target.closest('.expandable') || target.closest('a') || target.closest('button')) {
                             return;
                         }
 
@@ -685,6 +687,12 @@
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             toggleCard(e);
+                        } else if (e.key === 'Escape') {
+                            // Collapse card on Escape key
+                            if (reportCard.classList.contains('expanded')) {
+                                reportCard.classList.remove('expanded');
+                                reportCard.setAttribute('aria-expanded', 'false');
+                            }
                         }
                     });
 
