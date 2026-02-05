@@ -206,7 +206,8 @@
         }
 
         function parseNcduData(data) {
-            // NCDU format: [version, timestamp, metadata, root_entry, ...children]
+            // NCDU format: [version, minor_version, metadata, root_entry]
+            // root_entry is a list: [root_metadata, child1, child2, ...]
             if (Array.isArray(data) && data.length > 3) {
                 return data[3]; // Return the root entry
             }
