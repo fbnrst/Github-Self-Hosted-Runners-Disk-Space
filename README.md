@@ -78,11 +78,40 @@ Both workflows can also be manually triggered via `workflow_dispatch` (see "Manu
 
 - **Tool**: ncdu (NCurses Disk Usage) v1.15+
 - **Format**: JSON export format
+- **Storage**: JSON data files are tracked with Git LFS (Large File Storage) for efficient repository management
 - **Runners**:
   - x86_64: `ubuntu-latest`
   - aarch64: `ubuntu-latest-arm64`
 
 ## Development
+
+### Git LFS Setup
+
+This repository uses Git LFS to manage the large JSON data files in `docs/data/`. If you're contributing or cloning the repository:
+
+1. **Install Git LFS** (if not already installed):
+   ```bash
+   # On macOS
+   brew install git-lfs
+
+   # On Ubuntu/Debian
+   sudo apt-get install git-lfs
+
+   # On Windows (with Git for Windows)
+   # Git LFS is included by default
+   ```
+
+2. **Initialize Git LFS**:
+   ```bash
+   git lfs install
+   ```
+
+3. **Clone the repository** (Git LFS will automatically download the JSON files):
+   ```bash
+   git clone https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space.git
+   ```
+
+For more details on the Git LFS setup, see [GIT_LFS_SETUP.md](GIT_LFS_SETUP.md).
 
 ### Pre-commit Hooks
 
@@ -110,12 +139,17 @@ The hooks will automatically check:
 │       ├── collect-disk-space.yml          # Data collection workflow (weekly)
 │       ├── collect-disk-space-template.yml # Reusable workflow template
 │       └── deploy-pages.yml                # GitHub Pages deployment workflow
+├── .gitattributes                          # Git LFS configuration
 ├── .pre-commit-config.yaml                 # Pre-commit hooks configuration
 ├── docs/
 │   ├── index.html                          # GitHub Pages viewer
-│   └── data/                               # Generated disk space reports
+│   └── data/                               # Generated disk space reports (Git LFS)
 │       ├── x86_64.json
-│       └── aarch64.json
+│       ├── aarch64.json
+│       ├── x86_64-22.04.json
+│       ├── aarch64-22.04.json
+│       └── x86_64-slim.json
+├── GIT_LFS_SETUP.md                        # Git LFS setup instructions
 └── README.md
 ```
 

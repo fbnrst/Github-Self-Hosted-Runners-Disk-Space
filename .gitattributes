@@ -1,0 +1,2 @@
+# Track JSON files in docs/data/ with git LFS
+docs/data/*.json filter=lfs diff=lfs merge=lfs -text
