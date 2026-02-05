@@ -254,31 +254,31 @@
         function renderTreeItem(item, level = 0, parentDiv) {
             const div = document.createElement('div');
             div.className = 'tree-item';
-            
+
             const indent = '&nbsp;'.repeat(level * 4);
             const isDir = item.name && item.name.endsWith('/');
-            
+
             let content = indent;
-            
+
             if (Array.isArray(item) && item.length > 2) {
                 // NCDU format: [size, name, children...]
                 const size = item[0];
                 const name = item[1];
                 const hasChildren = item.length > 2;
-                
+
                 if (hasChildren) {
                     content += `<span class="expandable">`;
                 }
-                
+
                 content += `<span class="tree-item-dir">${name}</span>`;
                 content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
-                
+
                 if (hasChildren) {
                     content += `</span>`;
-                    
+
                     const childrenDiv = document.createElement('div');
                     childrenDiv.className = 'children';
-                    
+
                     div.addEventListener('click', function(e) {
                         e.stopPropagation();
                         const expandable = this.querySelector('.expandable');
@@ -288,19 +288,19 @@
                             children.classList.toggle('visible');
                         }
                     });
-                    
+
                     // Render children
                     for (let i = 2; i < item.length; i++) {
                         renderTreeItem(item[i], level + 1, childrenDiv);
                     }
-                    
+
                     div.innerHTML = content;
                     parentDiv.appendChild(div);
                     parentDiv.appendChild(childrenDiv);
                     return;
                 }
             }
-            
+
             div.innerHTML = content;
             parentDiv.appendChild(div);
         }

@@ -39,10 +39,28 @@ The workflow runs automatically:
 
 - **Tool**: ncdu (NCurses Disk Usage) v1.15+
 - **Format**: JSON export format
-- **Exclusions**: `/proc`, `/sys`, `/dev`, `/run`, `/tmp` directories are excluded from scans
-- **Runners**: 
+- **Runners**:
   - x86_64: `ubuntu-latest`
   - aarch64: `ubuntu-latest-arm64`
+
+## Development
+
+### Pre-commit Hooks
+
+This repository uses pre-commit hooks to maintain code quality. To set up:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+The hooks will automatically check:
+- Trailing whitespace
+- End of file fixers
+- YAML syntax validation
+- JSON syntax validation
+- Large file detection
+- Merge conflict markers
 
 ## Repository Structure
 
@@ -51,6 +69,7 @@ The workflow runs automatically:
 ├── .github/
 │   └── workflows/
 │       └── disk-space-overview.yml  # GitHub Actions workflow
+├── .pre-commit-config.yaml          # Pre-commit hooks configuration
 ├── docs/
 │   ├── index.html                    # GitHub Pages viewer
 │   └── data/                         # Generated disk space reports
