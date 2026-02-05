@@ -315,13 +315,26 @@
                         latestTimestamp = data.timestamp;
                     }
 
+                    // Build metadata spans
+                    let metaSpans = `
+                        <span>Runner: ${data.runner}</span>
+                        <span>Updated: ${formatDate(data.timestamp)}</span>
+                        <span>Used: ${formatBytes(rootSize)}</span>
+                    `;
+
+                    // Add total disk size and available space if present
+                    if (data.total_disk_size !== undefined) {
+                        metaSpans += `<span>Total Size: ${formatBytes(data.total_disk_size)}</span>`;
+                    }
+                    if (data.available_space !== undefined) {
+                        metaSpans += `<span>Available: ${formatBytes(data.available_space)}</span>`;
+                    }
+
                     reportCard.innerHTML = `
                         <div class="report-header">
                             <h2>${title}</h2>
                             <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(rootSize)}</span>
+                                ${metaSpans}
                             </div>
                         </div>
                         <div class="tree-view" id="tree-${data.architecture}"></div>

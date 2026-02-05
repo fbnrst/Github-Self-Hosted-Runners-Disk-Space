@@ -33,12 +33,19 @@ jobs:
           # Run ncdu and export to JSON
           sudo ncdu / -o docs/data/${{ inputs.architecture }}-raw.json -x || true
 
+          # Get disk space information
+          df_output=$(df -B1 / | tail -1)
+          total_size=$(echo "$df_output" | awk '{print $2}')
+          available_space=$(echo "$df_output" | awk '{print $4}')
+
           # Add metadata
           echo "{" > docs/data/${{ inputs.architecture }}.json
           echo "  \"architecture\": \"${{ inputs.architecture }}\"," >> docs/data/${{ inputs.architecture }}.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/${{ inputs.architecture }}.json
           echo "  \"runner\": \"${{ inputs.runner }}\"," >> docs/data/${{ inputs.architecture }}.json
+          echo "  \"total_disk_size\": $total_size," >> docs/data/${{ inputs.architecture }}.json
+          echo "  \"available_space\": $available_space," >> docs/data/${{ inputs.architecture }}.json
           data=$(cat docs/data/${{ inputs.architecture }}-raw.json)
           echo "  \"data\": $data" >> docs/data/${{ inputs.architecture }}.json
           echo "}" >> docs/data/${{ inputs.architecture }}.json
