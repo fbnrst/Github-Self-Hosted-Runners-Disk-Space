@@ -631,9 +631,21 @@
                     reportCard.setAttribute('tabindex', '0');
 
                     const totalSize = data.total_size || 0;
+                    const totalDiskSize = data.total_disk_size || 0;
+                    const availableSpace = data.available_space || 0;
+                    const usedSpace = totalDiskSize - availableSpace;
 
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
+                    }
+
+                    // Build disk space info string
+                    let diskSpaceInfo = '';
+                    if (totalDiskSize > 0) {
+                        diskSpaceInfo = `<span>Used: ${formatBytes(usedSpace)} / ${formatBytes(totalDiskSize)}</span>`;
+                        if (availableSpace > 0) {
+                            diskSpaceInfo += `<span>Free: ${formatBytes(availableSpace)}</span>`;
+                        }
                     }
 
                     reportCard.innerHTML = `
@@ -644,6 +656,7 @@
                                     <span>Runner: ${data.runner}</span>
                                     <span>Updated: ${formatDate(data.timestamp)}</span>
                                     <span>Total: ${formatBytes(totalSize)}</span>
+                                    ${diskSpaceInfo}
                                 </div>
                             </div>
                             <div class="expand-icon">▼</div>
