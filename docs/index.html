@@ -228,6 +228,10 @@
     </div>
 
     <script>
+        // Configuration for data source
+        // Data files are stored in a separate 'data' branch to avoid conflicts with page design PRs
+        const DATA_BASE_URL = 'https://raw.githubusercontent.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/data/data/';
+        
         // Cache for full JSON data (lazy loaded)
         const fullDataCache = {};
         // Current sort order: 'name' or 'size'
@@ -327,7 +331,7 @@
             }
 
             try {
-                const response = await fetch(`data/${architecture}.json`);
+                const response = await fetch(`${DATA_BASE_URL}${architecture}.json`);
                 if (!response.ok) {
                     throw new Error(`Failed to load full ${architecture} data`);
                 }
@@ -541,7 +545,7 @@
 
         async function loadMetadata(architecture) {
             try {
-                const response = await fetch(`data/${architecture}-metadata.json`);
+                const response = await fetch(`${DATA_BASE_URL}${architecture}-metadata.json`);
                 if (!response.ok) {
                     throw new Error(`Failed to load ${architecture} metadata`);
                 }

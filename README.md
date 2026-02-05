@@ -3,7 +3,7 @@
 [![Collect Disk Space Data](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/collect-disk-space.yml/badge.svg)](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/collect-disk-space.yml)
 [![Deploy GitHub Pages](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/deploy-pages.yml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/fbnrst/Github-Self-Hosted-Runners-Disk-Space/main.svg)](https://results.pre-commit.ci/latest/github/fbnrst/Github-Self-Hosted-Runners-Disk-Space/main)
-[![Last Data Update](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffbnrst%2FGithub-Self-Hosted-Runners-Disk-Space%2Fmain%2Fdocs%2Fdata%2Fx86_64.json&query=%24.timestamp&label=Last%20NCDU%20Run&color=blue)](https://fbnrst.github.io/Github-Self-Hosted-Runners-Disk-Space/)
+[![Last Data Update](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffbnrst%2FGithub-Self-Hosted-Runners-Disk-Space%2Fdata%2Fdata%2Fx86_64.json&query=%24.timestamp&label=Last%20NCDU%20Run&color=blue)](https://fbnrst.github.io/Github-Self-Hosted-Runners-Disk-Space/)
 
 This repository provides automated weekly disk space analysis for GitHub Actions runners on different architectures (x86_64 and aarch64).
 
@@ -20,9 +20,9 @@ This repository provides automated weekly disk space analysis for GitHub Actions
 
 1. **Data Collection**: The `collect-disk-space.yml` workflow uses `ncdu` (NCurses Disk Usage) to scan the filesystem on both x86_64 and aarch64 runners
 2. **Metadata Generation**: Lightweight metadata files are automatically generated from full reports for fast page loading
-3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to the repository
-4. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory
-5. **Visualization**: An interactive HTML page displays the data with expandable tree views and lazy-loaded details
+3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to a separate `data` branch to avoid conflicts with page design changes. Git LFS (Large File Storage) is used to efficiently handle large files.
+4. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory (excluding data files)
+5. **Visualization**: An interactive HTML page displays the data with expandable tree views and lazy-loaded details by fetching from the `data` branch
 
 ## Workflows
 
@@ -35,18 +35,19 @@ The data collection workflow (`collect-disk-space.yml`) runs weekly to gather di
   1. Runs ncdu on x86_64 and aarch64 runners in parallel
   2. Generates JSON reports with metadata
   3. Creates lightweight metadata files for fast page loading
-  4. Commits reports to `docs/data/` directory
+  4. Commits reports to a separate `data` branch using Git LFS for efficient large file storage
 
 ### Pages Deployment Workflow
 
 The pages deployment workflow (`deploy-pages.yml`) runs independently:
-- **Trigger**: Automatically on push to `docs/` directory (e.g., when data is updated or layout changes)
+- **Trigger**: Automatically on push to `docs/` directory for layout/design changes (data files are excluded since they're in a separate branch)
 - **Process**: Deploys the `docs/` directory to GitHub Pages
 
 This separation allows you to:
-- Update page layouts without re-running expensive ncdu scans
-- Collect data on a scheduled basis without triggering deployments
-- Deploy page updates quickly and independently
+- Update page layouts without conflicting with data updates
+- Collect data on a scheduled basis without triggering page deployments
+- Make PRs for page design changes without merge conflicts from data updates
+- Keep only the latest data version without history (stored in separate `data` branch)
 
 ## Viewing the Reports
 
@@ -106,6 +107,7 @@ The hooks will automatically check:
 
 ## Repository Structure
 
+### Main Branch
 ```
 .
 ├── .github/
@@ -115,17 +117,34 @@ The hooks will automatically check:
 │       └── deploy-pages.yml                # GitHub Pages deployment workflow
 ├── .pre-commit-config.yaml                 # Pre-commit hooks configuration
 ├── docs/
-│   ├── index.html                          # GitHub Pages viewer (with lazy loading)
-│   └── data/                               # Generated disk space reports
-│       ├── x86_64.json                     # Full NCDU data (~56MB)
-│       ├── x86_64-metadata.json            # Lightweight metadata (~600 bytes)
-│       ├── aarch64.json                    # Full NCDU data (~24MB)
-│       └── aarch64-metadata.json           # Lightweight metadata (~600 bytes)
+│   └── index.html                          # GitHub Pages viewer (fetches data from data branch)
 ├── scripts/
 │   ├── generate-metadata.py               # Metadata extraction script
 │   └── README.md                           # Scripts documentation
 └── README.md
 ```
+
+### Data Branch (Separate, No History)
+```
+data/
+├── .gitattributes                  # Git LFS configuration
+├── x86_64.json                     # Full NCDU data (~56MB, stored in LFS)
+├── x86_64-metadata.json            # Lightweight metadata (~600 bytes)
+├── aarch64.json                    # Full NCDU data (~24MB, stored in LFS)
+├── aarch64-metadata.json           # Lightweight metadata (~600 bytes)
+└── ... (other architecture data files)
+```
+
+The `data` branch is an orphan branch that stores only the latest version of data files to:
+- Avoid merge conflicts with page design PRs
+- Keep the main branch history clean
+- Reduce repository size (no data file history)
+- Use Git LFS for efficient storage of large JSON files
+
+**Git LFS (Large File Storage)**: The data branch uses Git LFS to efficiently store large JSON files. The actual file content is stored in LFS storage, while Git stores only small pointer files. This provides:
+- Faster cloning and fetching (downloads pointers initially, actual files on-demand)
+- Efficient handling of large files (200MB+ total data)
+- Better repository performance
 
 ## License
 
