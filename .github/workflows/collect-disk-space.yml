@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/collect-disk-space.yml'
       - '.github/workflows/collect-disk-space-template.yml'
+      - 'scripts/generate-metadata.py'
 
 permissions:
   contents: write
