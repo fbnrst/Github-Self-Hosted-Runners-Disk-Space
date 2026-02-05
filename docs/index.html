@@ -279,6 +279,9 @@
         // All runners to display
         // Note: Architecture identifiers must match the filenames in the data branch
         // (e.g., 'x86_64-slim' corresponds to x86_64-slim.json and x86_64-slim-metadata.json)
+        // Naming conventions follow the workflow configuration in .github/workflows/collect-disk-space.yml
+        // Ubuntu versions are explicit where the runner provides them (24.04, 22.04)
+        // 'slim' variant doesn't include version in its identifier per workflow configuration
         const RUNNERS = [
             { architecture: 'x86_64', title: 'x86_64 (Intel/AMD) - Ubuntu 24.04' },
             { architecture: 'aarch64', title: 'aarch64 (ARM64) - Ubuntu 24.04' },
@@ -653,6 +656,7 @@
                     // Add click handler to toggle expansion
                     const toggleCard = function(e) {
                         // Don't toggle if clicking on interactive elements within tree view
+                        // Check for expandable items, links, and buttons for future-proofing
                         const target = e.target;
                         if (target.closest('.expandable') || target.closest('a') || target.closest('button')) {
                             return;
