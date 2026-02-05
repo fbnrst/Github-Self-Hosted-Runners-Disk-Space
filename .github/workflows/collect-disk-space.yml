@@ -29,8 +29,8 @@ jobs:
 
           # Get disk space information
           disk_info=$(df / --output=size,used,avail -B1 | tail -1)
-          total_size=$(echo $disk_info | awk '{print $1}')
-          free_space=$(echo $disk_info | awk '{print $3}')
+          total_size=$(echo "$disk_info" | awk '{print $1}')
+          free_space=$(echo "$disk_info" | awk '{print $3}')
 
           # Add metadata
           echo "{" > docs/data/x86_64.json
@@ -72,8 +72,8 @@ jobs:
 
           # Get disk space information
           disk_info=$(df / --output=size,used,avail -B1 | tail -1)
-          total_size=$(echo $disk_info | awk '{print $1}')
-          free_space=$(echo $disk_info | awk '{print $3}')
+          total_size=$(echo "$disk_info" | awk '{print $1}')
+          free_space=$(echo "$disk_info" | awk '{print $3}')
 
           # Add metadata
           echo "{" > docs/data/aarch64.json
