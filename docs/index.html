@@ -38,6 +38,73 @@
             font-size: 1.1em;
         }
 
+        .info-box {
+            background: white;
+            border-radius: 12px;
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            line-height: 1.6;
+        }
+
+        .info-box h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .info-box p {
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .info-box code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #667eea;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-box li {
+            margin-bottom: 12px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .info-box li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .info-box a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .info-box a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
         .reports-container {
             display: flex;
             flex-direction: column;
@@ -249,6 +316,36 @@
     <div class="container">
         <h1>🖥️ GitHub Runners Disk Space Overview</h1>
         <p class="subtitle">Weekly disk usage analysis for self-hosted runners</p>
+
+        <div class="info-box">
+            <h2>📊 What This Page Shows</h2>
+            <p>
+                This page displays detailed disk space usage analysis for GitHub Actions runners across different architectures and Ubuntu versions.
+                The data is collected weekly using <code>ncdu</code> (NCurses Disk Usage) and helps you understand what's consuming disk space on GitHub runners.
+            </p>
+            <p>
+                <strong>Why is this important?</strong> Disk space limitations can cause CI/CD jobs to fail. By understanding which directories and files consume the most space,
+                you can make informed decisions about what data to delete to free up space for your workflows.
+            </p>
+            <h3>🧹 Cleanup Resources</h3>
+            <ul>
+                <li>
+                    <strong>Automated Cleanup Action:</strong>
+                    <a href="https://github.com/endersonmenezes/free-disk-space" target="_blank" rel="noopener noreferrer">free-disk-space</a>
+                    - A GitHub Action to automatically free disk space in your workflows
+                </li>
+                <li>
+                    <strong>Comprehensive Guide:</strong>
+                    <a href="https://www.geraldonit.com/mastering-disk-space-on-github-actions-runners-a-deep-dive-into-cleanup-strategies-for-x64-and-arm64-runners/" target="_blank" rel="noopener noreferrer">Mastering Disk Space on GitHub Actions Runners</a>
+                    - Deep dive into cleanup strategies for x64 and ARM64 runners
+                </li>
+                <li>
+                    <strong>Practical Tips:</strong>
+                    <a href="https://dev.to/mathio/squeezing-disk-space-from-github-actions-runners-an-engineers-guide-3pjg" target="_blank" rel="noopener noreferrer">Squeezing Disk Space from GitHub Actions Runners</a>
+                    - An engineer's guide with practical optimization techniques
+                </li>
+            </ul>
+        </div>
 
         <div id="loading" class="loading">Loading disk space reports...</div>
         <div id="error" class="error" style="display: none;"></div>
