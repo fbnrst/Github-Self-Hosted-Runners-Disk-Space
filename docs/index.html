@@ -262,6 +262,10 @@
                     const sizeB = (Array.isArray(b) && b.length >= 1) ? b[0] : 0;
                     return sizeB - sizeA; // Descending order (largest first)
                 });
+            } else {
+                // Default to size sorting for invalid sort orders
+                console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
+                return sortEntries(entries, 'size');
             }
             
             return sorted;
@@ -286,6 +290,10 @@
                         ? ((b[0].asize || 0) + (b[0].dsize || 0)) : 0;
                     return sizeB - sizeA; // Descending order
                 });
+            } else {
+                // Default to size sorting for invalid sort orders
+                console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
+                return sortFullEntries(entries, 'size');
             }
             
             return sorted;
