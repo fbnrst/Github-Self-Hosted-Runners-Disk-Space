@@ -9,9 +9,9 @@ Generates lightweight metadata files from full NCDU JSON reports for faster page
 ### What it does
 
 - Extracts essential information (architecture, timestamp, runner, total size)
-- Includes only the top 20 directory entries
+- Includes all directory entries (no longer limited to top 20)
 - Creates `-metadata.json` files alongside the full JSON files
-- Reduces file sizes by 90-97% (e.g., 56MB → 600 bytes)
+- Reduces file sizes significantly (e.g., 56MB → varies based on entry count)
 
 ### Usage
 
