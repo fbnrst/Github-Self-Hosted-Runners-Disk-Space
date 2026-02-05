@@ -29,7 +29,7 @@ def extract_entry_info(entry, max_depth=1, current_depth=0):
 
 def get_entry_size(entry):
     """Calculate total size of an NCDU entry.
-    
+
     In NCDU format, dsize (disk usage) already includes all children.
     We only need to extract the size from the metadata, not recursively sum children.
     """
