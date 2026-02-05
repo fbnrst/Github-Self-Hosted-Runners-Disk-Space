@@ -5,6 +5,12 @@ on:
     # Run every Monday at 00:00 UTC
     - cron: '0 0 * * 1'
   workflow_dispatch: # Allow manual triggering
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/collect-disk-space.yml'
+      - '.github/workflows/collect-disk-space-template.yml'
 
 permissions:
   contents: write
