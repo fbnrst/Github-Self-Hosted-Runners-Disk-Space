@@ -7,6 +7,10 @@ on:
     paths:
       - 'docs/**'
   workflow_dispatch: # Allow manual triggering
+  workflow_run:
+    workflows: ["Collect Disk Space Data"]
+    types:
+      - completed
 
 permissions:
   contents: read
