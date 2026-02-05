@@ -203,34 +203,76 @@
         }
 
         function parseNcduData(data) {
-            // NCDU format: [version, timestamp, metadata, entries...]
+            // NCDU format: [version, minor_version, metadata, root_entry]
+            // root_entry is a list: [root_metadata, child1, child2, ...]
             if (Array.isArray(data) && data.length > 3) {
-                return data.slice(3);
+                return data[3]; // Return the root entry
             }
-            return [];
+            return null;
         }
 
-        function renderTreeItem(item, level = 0, parentDiv) {
+        // Configuration constants
+        const MAX_AUTO_CALC_DEPTH = 2; // Max depth for automatic size calculation
+        const MAX_VISIBLE_ITEMS = 50; // Maximum items to display per directory
+        const SIZE_CALC_DELAY_MS = 100; // Delay before calculating total size to avoid blocking
+
+        // Cache for calculated sizes
+        const sizeCache = new WeakMap();
+
+        function calculateSize(item) {
+            // Calculate total size of an entry
+            if (typeof item === 'object' && item !== null) {
+                if (Array.isArray(item)) {
+                    // Check cache first
+                    if (sizeCache.has(item)) {
+                        return sizeCache.get(item);
+                    }
+                    
+                    // Directory: sum all children
+                    let total = 0;
+                    for (let i = 1; i < item.length; i++) {
+                        total += calculateSize(item[i]);
+                    }
+                    
+                    // Cache the result
+                    sizeCache.set(item, total);
+                    return total;
+                } else {
+                    // File: return dsize
+                    return item.dsize || 0;
+                }
+            }
+            return 0;
+        }
+
+        function renderTreeItem(item, level = 0, parentDiv, skipSizeCalc = false) {
             const div = document.createElement('div');
             div.className = 'tree-item';
 
             const indent = '&nbsp;'.repeat(level * 4);
-            const isDir = item.name && item.name.endsWith('/');
 
             let content = indent;
 
-            if (Array.isArray(item) && item.length >= 2) {
-                // NCDU format: [size, name, children...]
-                const size = item[0];
-                const name = item[1];
-                const hasChildren = item.length > 2;
+            if (Array.isArray(item) && item.length > 0) {
+                // Directory: [metadata, child1, child2, ...]
+                const metadata = item[0];
+                const name = metadata.name || 'unknown';
+                const hasChildren = item.length > 1;
+                
+                // For performance, don't calculate size for deeply nested items
+                const size = skipSizeCalc || level > MAX_AUTO_CALC_DEPTH ? 0 : calculateSize(item);
 
                 if (hasChildren) {
                     content += `<span class="expandable">`;
                 }
 
-                content += `<span class="tree-item-dir">${name}</span>`;
-                content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+                content += `<span class="tree-item-dir">📁 ${name}</span>`;
+                // Show size if calculated, or placeholder if skipped
+                if (!skipSizeCalc && size > 0) {
+                    content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+                } else if (!skipSizeCalc) {
+                    content += `<span class="tree-item-size">...</span>`;
+                }
 
                 if (hasChildren) {
                     content += `</span>`;
@@ -244,20 +286,32 @@
                         const children = this.nextElementSibling;
                         if (expandable && children) {
                             expandable.classList.toggle('expanded');
+                            
+                            // Lazy load children on first expand
+                            if (!children.classList.contains('loaded')) {
+                                children.innerHTML = '';
+                                for (let i = 1; i < item.length; i++) {
+                                    renderTreeItem(item[i], level + 1, children, true);
+                                }
+                                children.classList.add('loaded');
+                            }
+                            
                             children.classList.toggle('visible');
                         }
                     });
-
-                    // Render children
-                    for (let i = 2; i < item.length; i++) {
-                        renderTreeItem(item[i], level + 1, childrenDiv);
-                    }
 
                     div.innerHTML = content;
                     parentDiv.appendChild(div);
                     parentDiv.appendChild(childrenDiv);
                     return;
                 }
+            } else if (typeof item === 'object' && item !== null) {
+                // File: {name, asize, dsize, ...}
+                const name = item.name || 'unknown';
+                const size = item.dsize || 0;
+                
+                content += `<span class="tree-item-name">📄 ${name}</span>`;
+                content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
             }
 
             div.innerHTML = content;
@@ -308,9 +362,12 @@
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
 
-                    const entries = parseNcduData(data.data);
-                    const rootSize = entries.length > 0 && Array.isArray(entries[0]) ? entries[0][0] : 0;
-
+                    const rootEntry = parseNcduData(data.data);
+                    if (!rootEntry) return;
+                    
+                    // Calculate root size in the background to avoid blocking
+                    const rootSizeText = '(calculating...)';
+                    
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
                     }
@@ -319,7 +376,7 @@
                     let metaSpans = `
                         <span>Runner: ${data.runner}</span>
                         <span>Updated: ${formatDate(data.timestamp)}</span>
-                        <span>Used: ${formatBytes(rootSize)}</span>
+                        <span id="used-${data.architecture}">Used: ${rootSizeText}</span>
                     `;
 
                     // Add total disk size and available space if present
@@ -344,18 +401,30 @@
 
                     reportsEl.appendChild(reportCard);
 
-                    // Render tree
+                    // Render tree - show children of root directory
                     const treeView = document.getElementById(`tree-${data.architecture}`);
-                    entries.slice(0, 20).forEach(entry => {
-                        renderTreeItem(entry, 0, treeView);
+                    const children = rootEntry.slice(1); // Skip root metadata
+                    
+                    // Render items immediately
+                    children.slice(0, MAX_VISIBLE_ITEMS).forEach(entry => {
+                        renderTreeItem(entry, 0, treeView, false);
                     });
 
-                    if (entries.length > 20) {
+                    if (children.length > MAX_VISIBLE_ITEMS) {
                         const moreDiv = document.createElement('div');
                         moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${entries.length - 20} more items</em>`;
+                        moreDiv.innerHTML = `<em>... ${children.length - MAX_VISIBLE_ITEMS} more items</em>`;
                         treeView.appendChild(moreDiv);
                     }
+                    
+                    // Calculate total size asynchronously to avoid blocking the UI
+                    setTimeout(() => {
+                        const rootSize = calculateSize(rootEntry);
+                        const usedEl = document.getElementById(`used-${data.architecture}`);
+                        if (usedEl) {
+                            usedEl.innerHTML = `Used: ${formatBytes(rootSize)}`;
+                        }
+                    }, SIZE_CALC_DELAY_MS);
                 });
 
                 if (latestTimestamp) {
