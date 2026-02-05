@@ -39,29 +39,44 @@
         }
 
         .reports-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-            gap: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
         .report-card {
             background: white;
             border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .report-card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .report-card.expanded {
+            cursor: default;
+        }
+
+        .report-card.expanded:hover {
+            transform: none;
         }
 
         .report-header {
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .report-header h2 {
             color: #333;
-            font-size: 1.8em;
-            margin-bottom: 10px;
+            font-size: 1.5em;
+            margin: 0;
         }
 
         .report-meta {
@@ -70,6 +85,7 @@
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            margin-top: 10px;
         }
 
         .report-meta span {
@@ -82,6 +98,27 @@
             content: '•';
             color: #667eea;
             font-weight: bold;
+        }
+
+        .expand-icon {
+            color: #667eea;
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .report-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .report-content {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .report-card.expanded .report-content {
+            display: block;
         }
 
         .tree-view {
@@ -231,15 +268,27 @@
         // Configuration for data source
         // Data files are stored in a separate 'data' branch to avoid conflicts with page design PRs
         const DATA_BASE_URL = 'https://raw.githubusercontent.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/data/data/';
-        
+
         // Cache for full JSON data (lazy loaded)
         const fullDataCache = {};
         // Current sort order: 'name' or 'size'
         let currentSortOrder = 'size';
-        // Maximum number of children to display
-        const MAX_CHILDREN_DISPLAY = 50;
         // Track if event listeners have been set up
         let sortListenersInitialized = false;
+
+        // All runners to display
+        // Note: Architecture identifiers must match the filenames in the data branch
+        // (e.g., 'x86_64-slim' corresponds to x86_64-slim.json and x86_64-slim-metadata.json)
+        // Naming conventions follow the workflow configuration in .github/workflows/collect-disk-space.yml
+        // Ubuntu versions are explicit where the runner provides them (24.04, 22.04)
+        // 'slim' variant doesn't include version in its identifier per workflow configuration
+        const RUNNERS = [
+            { architecture: 'x86_64', title: 'x86_64 (Intel/AMD) - Ubuntu 24.04' },
+            { architecture: 'aarch64', title: 'aarch64 (ARM64) - Ubuntu 24.04' },
+            { architecture: 'aarch64-22.04', title: 'aarch64 (ARM64) - Ubuntu 22.04' },
+            { architecture: 'x86_64-22.04', title: 'x86_64 (Intel/AMD) - Ubuntu 22.04' },
+            { architecture: 'x86_64-slim', title: 'x86_64 (Intel/AMD) - Ubuntu Slim' }
+        ];
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -253,7 +302,7 @@
             // Sort entries by name or size
             // Entry format: [size, name, has_children]
             const sorted = [...entries]; // Create a copy to avoid mutating original
-            
+
             if (sortOrder === 'name') {
                 sorted.sort((a, b) => {
                     const nameA = (Array.isArray(a) && a.length >= 2) ? a[1] : '';
@@ -271,7 +320,7 @@
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
                 return sortEntries(entries, 'size');
             }
-            
+
             return sorted;
         }
 
@@ -279,7 +328,7 @@
             // Sort full NCDU entries
             // Full entry format: [{name, asize, dsize}, ...children]
             const sorted = [...entries];
-            
+
             if (sortOrder === 'name') {
                 sorted.sort((a, b) => {
                     const nameA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') ? (a[0].name || '') : '';
@@ -288,9 +337,9 @@
                 });
             } else if (sortOrder === 'size') {
                 sorted.sort((a, b) => {
-                    const sizeA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') 
+                    const sizeA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object')
                         ? ((a[0].asize || 0) + (a[0].dsize || 0)) : 0;
-                    const sizeB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object') 
+                    const sizeB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object')
                         ? ((b[0].asize || 0) + (b[0].dsize || 0)) : 0;
                     return sizeB - sizeA; // Descending order
                 });
@@ -299,7 +348,7 @@
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
                 return sortFullEntries(entries, 'size');
             }
-            
+
             return sorted;
         }
 
@@ -391,19 +440,13 @@
                                     const entry = findEntryByPath(fullData, itemPath);
                                     if (entry && Array.isArray(entry) && entry.length > 1) {
                                         children.innerHTML = '';
-                                        // Get children (skip first element which is metadata)
-                                        const childEntries = entry.slice(1, Math.min(entry.length, MAX_CHILDREN_DISPLAY + 1));
+                                        // Get all children (skip first element which is metadata)
+                                        const childEntries = entry.slice(1);
                                         const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
-                                        
-                                        // Render sorted children
+
+                                        // Render all sorted children
                                         for (const child of sortedChildren) {
                                             await renderFullTreeItem(child, level + 1, children, arch, itemPath);
-                                        }
-                                        if (entry.length > MAX_CHILDREN_DISPLAY + 1) {
-                                            const moreDiv = document.createElement('div');
-                                            moreDiv.className = 'tree-item';
-                                            moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (entry.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
-                                            children.appendChild(moreDiv);
                                         }
                                         children.dataset.loaded = 'true';
                                     }
@@ -503,19 +546,13 @@
                                 if (!isExpanded && children.dataset.loaded === 'false') {
                                     const itemPath = JSON.parse(expandable.dataset.path);
                                     children.innerHTML = '';
-                                    // Get children (skip first element which is metadata)
-                                    const childEntries = item.slice(1, Math.min(item.length, MAX_CHILDREN_DISPLAY + 1));
+                                    // Get all children (skip first element which is metadata)
+                                    const childEntries = item.slice(1);
                                     const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
-                                    
-                                    // Render sorted children
+
+                                    // Render all sorted children
                                     for (const child of sortedChildren) {
                                         await renderFullTreeItem(child, level + 1, children, architecture, itemPath);
-                                    }
-                                    if (item.length > MAX_CHILDREN_DISPLAY + 1) {
-                                        const moreDiv = document.createElement('div');
-                                        moreDiv.className = 'tree-item';
-                                        moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (item.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
-                                        children.appendChild(moreDiv);
                                     }
                                     children.dataset.loaded = 'true';
                                 }
@@ -563,30 +600,35 @@
             const lastUpdatedEl = document.getElementById('lastUpdated');
 
             try {
-                // Load lightweight metadata files first
-                const [x86Metadata, armMetadata] = await Promise.all([
-                    loadMetadata('x86_64'),
-                    loadMetadata('aarch64')
-                ]);
+                // Load lightweight metadata files for all runners
+                const metadataPromises = RUNNERS.map(runner => loadMetadata(runner.architecture));
+                const metadataResults = await Promise.all(metadataPromises);
 
-                if (!x86Metadata && !armMetadata) {
+                // Check if at least one report is available
+                const hasData = metadataResults.some(data => data !== null);
+                if (!hasData) {
                     throw new Error('No reports available. Please wait for the workflow to run.');
                 }
 
                 loadingEl.style.display = 'none';
-                reportsEl.style.display = 'grid';
+                reportsEl.style.display = 'flex';
 
                 let latestTimestamp = null;
 
                 // Render each report using metadata
-                [
-                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
-                    { data: armMetadata, title: 'aarch64 (ARM64)' }
-                ].forEach(({ data, title }) => {
+                RUNNERS.forEach((runner, index) => {
+                    const data = metadataResults[index];
                     if (!data) return;
 
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
+                    // Store architecture for use in reloadExpandedViews when sort order changes
+                    reportCard.dataset.architecture = runner.architecture;
+                    // Add accessibility attributes
+                    reportCard.setAttribute('role', 'button');
+                    reportCard.setAttribute('aria-expanded', 'false');
+                    reportCard.setAttribute('aria-label', `Toggle ${runner.title} runner details`);
+                    reportCard.setAttribute('tabindex', '0');
 
                     const totalSize = data.total_size || 0;
 
@@ -596,33 +638,69 @@
 
                     reportCard.innerHTML = `
                         <div class="report-header">
-                            <h2>${title}</h2>
-                            <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(totalSize)}</span>
+                            <div>
+                                <h2>${runner.title}</h2>
+                                <div class="report-meta">
+                                    <span>Runner: ${data.runner}</span>
+                                    <span>Updated: ${formatDate(data.timestamp)}</span>
+                                    <span>Total: ${formatBytes(totalSize)}</span>
+                                </div>
                             </div>
+                            <div class="expand-icon">▼</div>
                         </div>
-                        <div class="tree-view" id="tree-${data.architecture}"></div>
+                        <div class="report-content">
+                            <div class="tree-view" id="tree-${data.architecture}"></div>
+                        </div>
                     `;
 
-                    reportsEl.appendChild(reportCard);
+                    // Add click handler to toggle expansion
+                    const toggleCard = function(e) {
+                        // Don't toggle if clicking on interactive elements within tree view
+                        // Check for expandable items, links, and buttons for future-proofing
+                        const target = e.target;
+                        if (target.closest('.expandable') || target.closest('a') || target.closest('button')) {
+                            return;
+                        }
 
-                    // Render tree using lightweight metadata
-                    const treeView = document.getElementById(`tree-${data.architecture}`);
-                    const topEntries = data.top_entries || [];
-                    const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
+                        const wasExpanded = reportCard.classList.contains('expanded');
 
-                    sortedTopEntries.forEach(entry => {
-                        renderTreeItem(entry, 0, treeView, data.architecture, []);
+                        // Collapse all other cards
+                        document.querySelectorAll('.report-card').forEach(card => {
+                            card.classList.remove('expanded');
+                            card.setAttribute('aria-expanded', 'false');
+                        });
+
+                        // Toggle this card
+                        if (!wasExpanded) {
+                            reportCard.classList.add('expanded');
+                            reportCard.setAttribute('aria-expanded', 'true');
+
+                            // Load tree view if not already loaded
+                            const treeView = reportCard.querySelector('.tree-view');
+                            if (treeView && treeView.dataset.loaded !== 'true') {
+                                renderTreeView(treeView, data);
+                                treeView.dataset.loaded = 'true';
+                            }
+                        }
+                    };
+
+                    reportCard.addEventListener('click', toggleCard);
+
+                    // Add keyboard support for accessibility
+                    reportCard.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleCard(e);
+                        } else if (e.key === 'Escape') {
+                            // Collapse card on Escape key
+                            if (reportCard.classList.contains('expanded')) {
+                                reportCard.classList.remove('expanded');
+                                reportCard.setAttribute('aria-expanded', 'false');
+                            }
+                        }
                     });
 
-                    if (data.total_entries > topEntries.length) {
-                        const moreDiv = document.createElement('div');
-                        moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
-                        treeView.appendChild(moreDiv);
-                    }
+                    reportsEl.appendChild(reportCard);
                 });
 
                 if (latestTimestamp) {
@@ -638,17 +716,17 @@
                     document.getElementById('sortByName').addEventListener('change', function() {
                         if (this.checked) {
                             currentSortOrder = 'name';
-                            reloadReportsWithSort();
+                            reloadExpandedViews();
                         }
                     });
 
                     document.getElementById('sortBySize').addEventListener('change', function() {
                         if (this.checked) {
                             currentSortOrder = 'size';
-                            reloadReportsWithSort();
+                            reloadExpandedViews();
                         }
                     });
-                    
+
                     sortListenersInitialized = true;
                 }
 
@@ -659,62 +737,39 @@
             }
         }
 
-        async function reloadReportsWithSort() {
-            // Re-render the reports with the new sort order
-            const reportsEl = document.getElementById('reports');
-            reportsEl.innerHTML = ''; // Clear existing reports
+        function renderTreeView(treeView, data) {
+            const topEntries = data.top_entries || [];
+            const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
 
-            try {
-                // Load metadata again (should be cached by browser)
-                const [x86Metadata, armMetadata] = await Promise.all([
-                    loadMetadata('x86_64'),
-                    loadMetadata('aarch64')
-                ]);
+            sortedTopEntries.forEach(entry => {
+                renderTreeItem(entry, 0, treeView, data.architecture, []);
+            });
 
-                // Render each report with new sort order
-                [
-                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
-                    { data: armMetadata, title: 'aarch64 (ARM64)' }
-                ].forEach(({ data, title }) => {
-                    if (!data) return;
+            if (data.total_entries > topEntries.length) {
+                const moreDiv = document.createElement('div');
+                moreDiv.className = 'tree-item';
+                moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
+                treeView.appendChild(moreDiv);
+            }
+        }
 
-                    const reportCard = document.createElement('div');
-                    reportCard.className = 'report-card';
+        async function reloadExpandedViews() {
+            // Re-render expanded tree views with the new sort order
+            const expandedCards = document.querySelectorAll('.report-card.expanded');
 
-                    const totalSize = data.total_size || 0;
+            for (const card of expandedCards) {
+                const architecture = card.dataset.architecture;
+                const treeView = card.querySelector('.tree-view');
 
-                    reportCard.innerHTML = `
-                        <div class="report-header">
-                            <h2>${title}</h2>
-                            <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(totalSize)}</span>
-                            </div>
-                        </div>
-                        <div class="tree-view" id="tree-${data.architecture}"></div>
-                    `;
-
-                    reportsEl.appendChild(reportCard);
-
-                    // Render tree using lightweight metadata with current sort order
-                    const treeView = document.getElementById(`tree-${data.architecture}`);
-                    const topEntries = data.top_entries || [];
-                    const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
-
-                    sortedTopEntries.forEach(entry => {
-                        renderTreeItem(entry, 0, treeView, data.architecture, []);
-                    });
-
-                    if (data.total_entries > topEntries.length) {
-                        const moreDiv = document.createElement('div');
-                        moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
-                        treeView.appendChild(moreDiv);
+                if (treeView) {
+                    // Reload metadata
+                    const data = await loadMetadata(architecture);
+                    if (data) {
+                        treeView.innerHTML = '';
+                        renderTreeView(treeView, data);
+                        treeView.dataset.loaded = 'true';
                     }
-                });
-            } catch (error) {
-                console.error('Error reloading reports:', error);
+                }
             }
         }
 
