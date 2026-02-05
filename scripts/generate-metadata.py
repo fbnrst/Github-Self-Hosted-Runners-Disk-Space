@@ -28,18 +28,18 @@ def extract_entry_info(entry, max_depth=1, current_depth=0):
 
 
 def get_entry_size(entry):
-    """Calculate total size of an NCDU entry."""
+    """Calculate total size of an NCDU entry.
+    
+    In NCDU format, dsize (disk usage) already includes all children.
+    We only need to extract the size from the metadata, not recursively sum children.
+    """
     if isinstance(entry, dict):
         return entry.get('asize', 0) + entry.get('dsize', 0)
-    elif isinstance(entry, list) and len(entry) >= 2:
-        # Recursive structure: [metadata, children...]
-        total = 0
+    elif isinstance(entry, list) and len(entry) >= 1:
+        # Entry is [metadata, children...]
+        # The metadata already contains the total size including all children
         if isinstance(entry[0], dict):
-            total = entry[0].get('asize', 0) + entry[0].get('dsize', 0)
-        # Add children sizes
-        for child in entry[1:]:
-            total += get_entry_size(child)
-        return total
+            return entry[0].get('asize', 0) + entry[0].get('dsize', 0)
     return 0
 
 
@@ -53,6 +53,8 @@ def generate_metadata(input_file, output_file, top_entries=20):
         "architecture": data.get("architecture"),
         "timestamp": data.get("timestamp"),
         "runner": data.get("runner"),
+        "total_disk_size": data.get("total_disk_size"),
+        "available_space": data.get("available_space"),
     }
 
     # Parse NCDU data structure: [version, timestamp, metadata, root_entry, ...children]
