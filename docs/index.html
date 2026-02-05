@@ -322,6 +322,8 @@
                                 <span>Runner: ${data.runner}</span>
                                 <span>Updated: ${formatDate(data.timestamp)}</span>
                                 <span>Total: ${formatBytes(rootSize)}</span>
+                                <span>Disk Size: ${formatBytes(data.total_size || 0)}</span>
+                                <span>Free Space: ${formatBytes(data.free_space || 0)}</span>
                             </div>
                         </div>
                         <div class="tree-view" id="tree-${data.architecture}"></div>

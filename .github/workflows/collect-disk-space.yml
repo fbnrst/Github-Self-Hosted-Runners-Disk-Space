@@ -27,12 +27,19 @@ jobs:
           # Run ncdu and export to JSON
           sudo ncdu / -o docs/data/x86_64-raw.json -x || true
 
+          # Get disk space information
+          disk_info=$(df / --output=size,used,avail -B1 | tail -1)
+          total_size=$(echo $disk_info | awk '{print $1}')
+          free_space=$(echo $disk_info | awk '{print $3}')
+
           # Add metadata
           echo "{" > docs/data/x86_64.json
           echo "  \"architecture\": \"x86_64\"," >> docs/data/x86_64.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/x86_64.json
           echo "  \"runner\": \"ubuntu-24.04\"," >> docs/data/x86_64.json
+          echo "  \"total_size\": $total_size," >> docs/data/x86_64.json
+          echo "  \"free_space\": $free_space," >> docs/data/x86_64.json
           data=$(cat docs/data/x86_64-raw.json)
           echo "  \"data\": $data" >> docs/data/x86_64.json
           echo "}" >> docs/data/x86_64.json
@@ -63,6 +70,11 @@ jobs:
           # Run ncdu and export to JSON
           sudo ncdu / -o docs/data/aarch64-raw.json -x || true
 
+          # Get disk space information
+          disk_info=$(df / --output=size,used,avail -B1 | tail -1)
+          total_size=$(echo $disk_info | awk '{print $1}')
+          free_space=$(echo $disk_info | awk '{print $3}')
+
           # Add metadata
           echo "{" > docs/data/aarch64.json
           echo "  \"architecture\": \"aarch64\"," >> docs/data/aarch64.json
@@ -70,6 +82,8 @@ jobs:
           echo "  \"timestamp\": \"$timestamp\"," >> docs/data/aarch64.json
           runner="ubuntu-24.04-arm"
           echo "  \"runner\": \"$runner\"," >> docs/data/aarch64.json
+          echo "  \"total_size\": $total_size," >> docs/data/aarch64.json
+          echo "  \"free_space\": $free_space," >> docs/data/aarch64.json
           data=$(cat docs/data/aarch64-raw.json)
           echo "  \"data\": $data" >> docs/data/aarch64.json
           echo "}" >> docs/data/aarch64.json
