@@ -12,6 +12,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   collect-disk-space:
     runs-on: ${{ inputs.runner }}
