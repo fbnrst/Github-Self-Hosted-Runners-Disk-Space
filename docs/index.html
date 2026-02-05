@@ -287,6 +287,17 @@
             });
         }
 
+        function formatDisplayName(architecture) {
+            // Create a friendly display name from architecture string
+            let displayName = architecture;
+            if (displayName.includes('x86_64')) {
+                displayName = displayName.replace('x86_64', 'x86_64 (Intel/AMD)');
+            } else if (displayName.includes('aarch64')) {
+                displayName = displayName.replace('aarch64', 'aarch64 (ARM64)');
+            }
+            return displayName;
+        }
+
         function parseNcduData(data) {
             // NCDU format: [version, minor_version, metadata, root_entry]
             // root_entry is a list: [root_metadata, child1, child2, ...]
@@ -582,13 +593,7 @@
                         latestTimestamp = metadata.timestamp;
                     }
 
-                    // Create a friendly display name
-                    let displayName = metadata.architecture;
-                    if (displayName.includes('x86_64')) {
-                        displayName = displayName.replace('x86_64', 'x86_64 (Intel/AMD)');
-                    } else if (displayName.includes('aarch64')) {
-                        displayName = displayName.replace('aarch64', 'aarch64 (ARM64)');
-                    }
+                    const displayName = formatDisplayName(metadata.architecture);
 
                     card.innerHTML = `
                         <h2>${displayName}</h2>
@@ -635,13 +640,7 @@
 
             const totalSize = metadata.total_size || 0;
 
-            // Create a friendly display name
-            let displayName = metadata.architecture;
-            if (displayName.includes('x86_64')) {
-                displayName = displayName.replace('x86_64', 'x86_64 (Intel/AMD)');
-            } else if (displayName.includes('aarch64')) {
-                displayName = displayName.replace('aarch64', 'aarch64 (ARM64)');
-            }
+            const displayName = formatDisplayName(metadata.architecture);
 
             reportCard.innerHTML = `
                 <div class="report-header">
