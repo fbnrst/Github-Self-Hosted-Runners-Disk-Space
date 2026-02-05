@@ -42,12 +42,12 @@ def get_entry_size(entry):
         if isinstance(entry[0], dict):
             # Add the directory/file's own size (inode)
             total_size += entry[0].get('asize', 0) + entry[0].get('dsize', 0)
-        
+
         # Recursively add all children's sizes
         for i in range(1, len(entry)):
             child = entry[i]
             total_size += get_entry_size(child)
-        
+
         return total_size
     return 0
 

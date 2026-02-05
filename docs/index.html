@@ -318,12 +318,12 @@
                     // Add the directory/file's own size (inode)
                     totalSize += (entry[0].asize || 0) + (entry[0].dsize || 0);
                 }
-                
+
                 // Recursively add all children's sizes
                 for (let i = 1; i < entry.length; i++) {
                     totalSize += calculateEntrySize(entry[i]);
                 }
-                
+
                 return totalSize;
             }
             return 0;
