@@ -38,6 +38,16 @@ jobs:
           total_size=$(echo "$df_output" | awk '{print $2}')
           available_space=$(echo "$df_output" | awk '{print $4}')
 
+          # Validate that we got valid numeric values
+          if ! [[ "$total_size" =~ ^[0-9]+$ ]]; then
+            echo "Warning: Could not determine total disk size, setting to 0"
+            total_size=0
+          fi
+          if ! [[ "$available_space" =~ ^[0-9]+$ ]]; then
+            echo "Warning: Could not determine available space, setting to 0"
+            available_space=0
+          fi
+
           # Add metadata
           echo "{" > docs/data/${{ inputs.architecture }}.json
           echo "  \"architecture\": \"${{ inputs.architecture }}\"," >> docs/data/${{ inputs.architecture }}.json
