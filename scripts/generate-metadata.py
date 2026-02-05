@@ -63,15 +63,9 @@ def get_entry_size(entry, seen_inodes=None):
         # Entry is [metadata, children...]
         total_size = 0
         if isinstance(entry[0], dict):
-            # Check if directory has an inode (shouldn't normally, but handle it)
-            ino = entry[0].get('ino')
-            if ino is not None:
-                if ino in seen_inodes:
-                    # Already counted
-                    return 0
-                seen_inodes.add(ino)
-
-            # Add the directory/file's own size (inode)
+            # Add the directory/file's own size (metadata)
+            # Note: We don't check inode for directories as they typically don't
+            # participate in hard linking, and skipping children would be incorrect
             total_size += entry[0].get('asize', 0) + entry[0].get('dsize', 0)
 
         # Recursively add all children's sizes
@@ -112,8 +106,10 @@ def generate_metadata(input_file, output_file, top_entries=20):
                 metadata["total_size"] = total_size
 
             # Get top N child entries (starting from index 1)
-            # Share seen_inodes across all top entries to avoid double-counting hard links
-            seen_inodes_top = set()
+            # Note: Each entry gets its own seen_inodes set, so sizes represent
+            # the apparent size of each entry independently. This means the sum
+            # of top entries may exceed total_size if there are hard links between
+            # top-level entries, which is expected behavior for showing per-directory stats.
             top_level_entries = []
             count = 0
             for i in range(1, min(len(root_entry), top_entries + 1)):
@@ -124,14 +120,16 @@ def generate_metadata(input_file, output_file, top_entries=20):
                     entry_meta = entry[0]
                     if isinstance(entry_meta, dict):
                         name = entry_meta.get('name', 'unknown')
-                        size = get_entry_size(entry, seen_inodes_top)
+                        # Each top-level entry gets its own inode set to show independent size
+                        size = get_entry_size(entry)
                         has_children = len(entry) > 1
                         top_level_entries.append([size, name, has_children])
                         count += 1
                 elif isinstance(entry, dict):
                     # Entry is just metadata (file, not directory)
                     name = entry.get('name', 'unknown')
-                    size = get_entry_size(entry, seen_inodes_top)
+                    # Each file gets its own calculation
+                    size = get_entry_size(entry)
                     top_level_entries.append([size, name, False])
                     count += 1
 
