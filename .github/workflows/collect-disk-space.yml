@@ -22,8 +22,31 @@ jobs:
       runner: ubuntu-24.04-arm
       architecture: aarch64
 
+  collect-disk-space-22-04-arm:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-22.04-arm
+      architecture: aarch64-22.04
+
+  collect-disk-space-22-04:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-22.04
+      architecture: x86_64-22.04
+
+  collect-disk-space-slim:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-slim
+      architecture: x86_64-slim
+
   commit-reports:
-    needs: [collect-disk-space-x86, collect-disk-space-arm64]
+    needs:
+      - collect-disk-space-x86
+      - collect-disk-space-arm64
+      - collect-disk-space-22-04-arm
+      - collect-disk-space-22-04
+      - collect-disk-space-slim
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -39,6 +62,24 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: disk-report-aarch64
+          path: docs/data
+
+      - name: Download aarch64-22.04 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-aarch64-22.04
+          path: docs/data
+
+      - name: Download x86_64-22.04 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-x86_64-22.04
+          path: docs/data
+
+      - name: Download x86_64-slim report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-x86_64-slim
           path: docs/data
 
       - name: Commit and push reports
