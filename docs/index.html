@@ -184,7 +184,7 @@
     <script>
         // Cache for full JSON data (lazy loaded)
         const fullDataCache = {};
-        
+
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
             const k = 1024;
@@ -213,13 +213,13 @@
             }
             return [];
         }
-        
+
         async function loadFullData(architecture) {
             // Load full JSON data only when needed
             if (fullDataCache[architecture]) {
                 return fullDataCache[architecture];
             }
-            
+
             try {
                 const response = await fetch(`data/${architecture}.json`);
                 if (!response.ok) {
@@ -261,20 +261,20 @@
                         e.stopPropagation();
                         const expandable = this.querySelector('.expandable');
                         const children = this.nextElementSibling;
-                        
+
                         if (expandable && children) {
                             const isExpanded = expandable.classList.contains('expanded');
                             expandable.classList.toggle('expanded');
                             children.classList.toggle('visible');
-                            
+
                             // Lazy load children on first expand
                             if (!isExpanded && children.dataset.loaded === 'false') {
                                 const arch = expandable.dataset.arch;
                                 const itemPath = JSON.parse(expandable.dataset.path);
-                                
+
                                 // Show loading indicator
                                 children.innerHTML = '<div style="padding: 10px; color: #666;">Loading...</div>';
-                                
+
                                 // Load full data and find the specific entry
                                 const fullData = await loadFullData(arch);
                                 if (fullData) {
@@ -311,44 +311,44 @@
             div.innerHTML = content;
             parentDiv.appendChild(div);
         }
-        
+
         function findEntryByPath(ncduData, path) {
             // Navigate through NCDU structure to find entry at path
             // ncduData[3] is root entry: [metadata, ...children]
             let current = ncduData[3];
-            
+
             for (const name of path) {
                 if (!Array.isArray(current) || current.length <= 1) {
                     return null;
                 }
-                
+
                 // Find child with matching name (skip index 0 which is metadata)
                 let found = false;
                 for (let i = 1; i < current.length; i++) {
                     const child = current[i];
                     let childName = null;
-                    
+
                     if (Array.isArray(child) && child.length > 0 && typeof child[0] === 'object') {
                         childName = child[0].name;
                     } else if (typeof child === 'object' && child.name) {
                         childName = child.name;
                     }
-                    
+
                     if (childName === name) {
                         current = child;
                         found = true;
                         break;
                     }
                 }
-                
+
                 if (!found) {
                     return null;
                 }
             }
-            
+
             return current;
         }
-        
+
         async function renderFullTreeItem(item, level, parentDiv, architecture, parentPath = []) {
             // Render item from full NCDU data
             const div = document.createElement('div');
@@ -364,7 +364,7 @@
                     const name = meta.name;
                     const size = (meta.asize || 0) + (meta.dsize || 0);
                     const hasChildren = item.length > 1;
-                    
+
                     if (hasChildren) {
                         content += `<span class="expandable" data-arch="${architecture}" data-path='${JSON.stringify([...parentPath, name])}'>`;
                         content += `<span class="tree-item-dir">${name}</span>`;
@@ -379,12 +379,12 @@
                             e.stopPropagation();
                             const expandable = this.querySelector('.expandable');
                             const children = this.nextElementSibling;
-                            
+
                             if (expandable && children) {
                                 const isExpanded = expandable.classList.contains('expanded');
                                 expandable.classList.toggle('expanded');
                                 children.classList.toggle('visible');
-                                
+
                                 // Load children on first expand
                                 if (!isExpanded && children.dataset.loaded === 'false') {
                                     const itemPath = JSON.parse(expandable.dataset.path);
@@ -510,7 +510,7 @@
                     // Render tree using lightweight metadata
                     const treeView = document.getElementById(`tree-${data.architecture}`);
                     const topEntries = data.top_entries || [];
-                    
+
                     topEntries.forEach(entry => {
                         renderTreeItem(entry, 0, treeView, data.architecture, []);
                     });
