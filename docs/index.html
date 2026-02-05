@@ -39,29 +39,44 @@
         }
 
         .reports-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-            gap: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
         .report-card {
             background: white;
             border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .report-card:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .report-card.expanded {
+            cursor: default;
+        }
+
+        .report-card.expanded:hover {
+            transform: none;
         }
 
         .report-header {
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .report-header h2 {
             color: #333;
-            font-size: 1.8em;
-            margin-bottom: 10px;
+            font-size: 1.5em;
+            margin: 0;
         }
 
         .report-meta {
@@ -70,6 +85,7 @@
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            margin-top: 10px;
         }
 
         .report-meta span {
@@ -82,6 +98,27 @@
             content: '•';
             color: #667eea;
             font-weight: bold;
+        }
+
+        .expand-icon {
+            color: #667eea;
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .report-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .report-content {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .report-card.expanded .report-content {
+            display: block;
         }
 
         .tree-view {
@@ -236,10 +273,17 @@
         const fullDataCache = {};
         // Current sort order: 'name' or 'size'
         let currentSortOrder = 'size';
-        // Maximum number of children to display
-        const MAX_CHILDREN_DISPLAY = 50;
         // Track if event listeners have been set up
         let sortListenersInitialized = false;
+
+        // All runners to display
+        const RUNNERS = [
+            { architecture: 'x86_64', title: 'x86_64 (Intel/AMD) - Ubuntu 24.04' },
+            { architecture: 'aarch64', title: 'aarch64 (ARM64) - Ubuntu 24.04' },
+            { architecture: 'aarch64-22.04', title: 'aarch64 (ARM64) - Ubuntu 22.04' },
+            { architecture: 'x86_64-22.04', title: 'x86_64 (Intel/AMD) - Ubuntu 22.04' },
+            { architecture: 'x86_64-slim', title: 'x86_64 (Intel/AMD) - Ubuntu Slim' }
+        ];
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -391,19 +435,13 @@
                                     const entry = findEntryByPath(fullData, itemPath);
                                     if (entry && Array.isArray(entry) && entry.length > 1) {
                                         children.innerHTML = '';
-                                        // Get children (skip first element which is metadata)
-                                        const childEntries = entry.slice(1, Math.min(entry.length, MAX_CHILDREN_DISPLAY + 1));
+                                        // Get all children (skip first element which is metadata)
+                                        const childEntries = entry.slice(1);
                                         const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
 
-                                        // Render sorted children
+                                        // Render all sorted children
                                         for (const child of sortedChildren) {
                                             await renderFullTreeItem(child, level + 1, children, arch, itemPath);
-                                        }
-                                        if (entry.length > MAX_CHILDREN_DISPLAY + 1) {
-                                            const moreDiv = document.createElement('div');
-                                            moreDiv.className = 'tree-item';
-                                            moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (entry.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
-                                            children.appendChild(moreDiv);
                                         }
                                         children.dataset.loaded = 'true';
                                     }
@@ -503,19 +541,13 @@
                                 if (!isExpanded && children.dataset.loaded === 'false') {
                                     const itemPath = JSON.parse(expandable.dataset.path);
                                     children.innerHTML = '';
-                                    // Get children (skip first element which is metadata)
-                                    const childEntries = item.slice(1, Math.min(item.length, MAX_CHILDREN_DISPLAY + 1));
+                                    // Get all children (skip first element which is metadata)
+                                    const childEntries = item.slice(1);
                                     const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
 
-                                    // Render sorted children
+                                    // Render all sorted children
                                     for (const child of sortedChildren) {
                                         await renderFullTreeItem(child, level + 1, children, architecture, itemPath);
-                                    }
-                                    if (item.length > MAX_CHILDREN_DISPLAY + 1) {
-                                        const moreDiv = document.createElement('div');
-                                        moreDiv.className = 'tree-item';
-                                        moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (item.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
-                                        children.appendChild(moreDiv);
                                     }
                                     children.dataset.loaded = 'true';
                                 }
@@ -563,30 +595,29 @@
             const lastUpdatedEl = document.getElementById('lastUpdated');
 
             try {
-                // Load lightweight metadata files first
-                const [x86Metadata, armMetadata] = await Promise.all([
-                    loadMetadata('x86_64'),
-                    loadMetadata('aarch64')
-                ]);
+                // Load lightweight metadata files for all runners
+                const metadataPromises = RUNNERS.map(runner => loadMetadata(runner.architecture));
+                const metadataResults = await Promise.all(metadataPromises);
 
-                if (!x86Metadata && !armMetadata) {
+                // Check if at least one report is available
+                const hasData = metadataResults.some(data => data !== null);
+                if (!hasData) {
                     throw new Error('No reports available. Please wait for the workflow to run.');
                 }
 
                 loadingEl.style.display = 'none';
-                reportsEl.style.display = 'grid';
+                reportsEl.style.display = 'flex';
 
                 let latestTimestamp = null;
 
                 // Render each report using metadata
-                [
-                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
-                    { data: armMetadata, title: 'aarch64 (ARM64)' }
-                ].forEach(({ data, title }) => {
+                RUNNERS.forEach((runner, index) => {
+                    const data = metadataResults[index];
                     if (!data) return;
 
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
+                    reportCard.dataset.architecture = runner.architecture;
 
                     const totalSize = data.total_size || 0;
 
@@ -596,33 +627,49 @@
 
                     reportCard.innerHTML = `
                         <div class="report-header">
-                            <h2>${title}</h2>
-                            <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(totalSize)}</span>
+                            <div>
+                                <h2>${runner.title}</h2>
+                                <div class="report-meta">
+                                    <span>Runner: ${data.runner}</span>
+                                    <span>Updated: ${formatDate(data.timestamp)}</span>
+                                    <span>Total: ${formatBytes(totalSize)}</span>
+                                </div>
                             </div>
+                            <div class="expand-icon">▼</div>
                         </div>
-                        <div class="tree-view" id="tree-${data.architecture}"></div>
+                        <div class="report-content">
+                            <div class="tree-view" id="tree-${data.architecture}"></div>
+                        </div>
                     `;
 
-                    reportsEl.appendChild(reportCard);
-
-                    // Render tree using lightweight metadata
-                    const treeView = document.getElementById(`tree-${data.architecture}`);
-                    const topEntries = data.top_entries || [];
-                    const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
-
-                    sortedTopEntries.forEach(entry => {
-                        renderTreeItem(entry, 0, treeView, data.architecture, []);
+                    // Add click handler to toggle expansion
+                    reportCard.addEventListener('click', function(e) {
+                        // Don't toggle if clicking inside tree view
+                        if (e.target.closest('.tree-view')) {
+                            return;
+                        }
+                        
+                        const wasExpanded = this.classList.contains('expanded');
+                        
+                        // Collapse all other cards
+                        document.querySelectorAll('.report-card').forEach(card => {
+                            card.classList.remove('expanded');
+                        });
+                        
+                        // Toggle this card
+                        if (!wasExpanded) {
+                            this.classList.add('expanded');
+                            
+                            // Load tree view if not already loaded
+                            const treeView = this.querySelector('.tree-view');
+                            if (treeView && treeView.dataset.loaded !== 'true') {
+                                renderTreeView(treeView, data);
+                                treeView.dataset.loaded = 'true';
+                            }
+                        }
                     });
 
-                    if (data.total_entries > topEntries.length) {
-                        const moreDiv = document.createElement('div');
-                        moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
-                        treeView.appendChild(moreDiv);
-                    }
+                    reportsEl.appendChild(reportCard);
                 });
 
                 if (latestTimestamp) {
@@ -638,14 +685,14 @@
                     document.getElementById('sortByName').addEventListener('change', function() {
                         if (this.checked) {
                             currentSortOrder = 'name';
-                            reloadReportsWithSort();
+                            reloadExpandedViews();
                         }
                     });
 
                     document.getElementById('sortBySize').addEventListener('change', function() {
                         if (this.checked) {
                             currentSortOrder = 'size';
-                            reloadReportsWithSort();
+                            reloadExpandedViews();
                         }
                     });
 
@@ -659,62 +706,39 @@
             }
         }
 
-        async function reloadReportsWithSort() {
-            // Re-render the reports with the new sort order
-            const reportsEl = document.getElementById('reports');
-            reportsEl.innerHTML = ''; // Clear existing reports
+        function renderTreeView(treeView, data) {
+            const topEntries = data.top_entries || [];
+            const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
 
-            try {
-                // Load metadata again (should be cached by browser)
-                const [x86Metadata, armMetadata] = await Promise.all([
-                    loadMetadata('x86_64'),
-                    loadMetadata('aarch64')
-                ]);
+            sortedTopEntries.forEach(entry => {
+                renderTreeItem(entry, 0, treeView, data.architecture, []);
+            });
 
-                // Render each report with new sort order
-                [
-                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
-                    { data: armMetadata, title: 'aarch64 (ARM64)' }
-                ].forEach(({ data, title }) => {
-                    if (!data) return;
+            if (data.total_entries > topEntries.length) {
+                const moreDiv = document.createElement('div');
+                moreDiv.className = 'tree-item';
+                moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
+                treeView.appendChild(moreDiv);
+            }
+        }
 
-                    const reportCard = document.createElement('div');
-                    reportCard.className = 'report-card';
-
-                    const totalSize = data.total_size || 0;
-
-                    reportCard.innerHTML = `
-                        <div class="report-header">
-                            <h2>${title}</h2>
-                            <div class="report-meta">
-                                <span>Runner: ${data.runner}</span>
-                                <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(totalSize)}</span>
-                            </div>
-                        </div>
-                        <div class="tree-view" id="tree-${data.architecture}"></div>
-                    `;
-
-                    reportsEl.appendChild(reportCard);
-
-                    // Render tree using lightweight metadata with current sort order
-                    const treeView = document.getElementById(`tree-${data.architecture}`);
-                    const topEntries = data.top_entries || [];
-                    const sortedTopEntries = sortEntries(topEntries, currentSortOrder);
-
-                    sortedTopEntries.forEach(entry => {
-                        renderTreeItem(entry, 0, treeView, data.architecture, []);
-                    });
-
-                    if (data.total_entries > topEntries.length) {
-                        const moreDiv = document.createElement('div');
-                        moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
-                        treeView.appendChild(moreDiv);
+        async function reloadExpandedViews() {
+            // Re-render expanded tree views with the new sort order
+            const expandedCards = document.querySelectorAll('.report-card.expanded');
+            
+            for (const card of expandedCards) {
+                const architecture = card.dataset.architecture;
+                const treeView = card.querySelector('.tree-view');
+                
+                if (treeView) {
+                    // Reload metadata
+                    const data = await loadMetadata(architecture);
+                    if (data) {
+                        treeView.innerHTML = '';
+                        renderTreeView(treeView, data);
+                        treeView.dataset.loaded = 'true';
                     }
-                });
-            } catch (error) {
-                console.error('Error reloading reports:', error);
+                }
             }
         }
 
