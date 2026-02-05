@@ -393,7 +393,9 @@
                         <div class="report-header">
                             <h2>${title}</h2>
                             <div class="report-meta">
-                                ${metaSpans}
+                                <span>Runner: ${data.runner}</span>
+                                <span>Updated: ${formatDate(data.timestamp)}</span>
+                                <span id="total-${data.architecture}">Total: ${rootSizeText}</span>
                             </div>
                         </div>
                         <div class="tree-view" id="tree-${data.architecture}"></div>
@@ -420,9 +422,9 @@
                     // Calculate total size asynchronously to avoid blocking the UI
                     setTimeout(() => {
                         const rootSize = calculateSize(rootEntry);
-                        const usedEl = document.getElementById(`used-${data.architecture}`);
-                        if (usedEl) {
-                            usedEl.innerHTML = `Used: ${formatBytes(rootSize)}`;
+                        const totalEl = document.getElementById(`total-${data.architecture}`);
+                        if (totalEl) {
+                            totalEl.innerHTML = `Total: ${formatBytes(rootSize)}`;
                         }
                     }, SIZE_CALC_DELAY_MS);
                 });
