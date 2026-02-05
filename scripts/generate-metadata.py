@@ -30,16 +30,25 @@ def extract_entry_info(entry, max_depth=1, current_depth=0):
 def get_entry_size(entry):
     """Calculate total size of an NCDU entry.
 
-    In NCDU format, dsize (disk usage) already includes all children.
-    We only need to extract the size from the metadata, not recursively sum children.
+    In NCDU format, directory metadata contains only the inode size.
+    We need to recursively sum all children to get the total size.
     """
     if isinstance(entry, dict):
+        # File entry: just return asize + dsize
         return entry.get('asize', 0) + entry.get('dsize', 0)
     elif isinstance(entry, list) and len(entry) >= 1:
         # Entry is [metadata, children...]
-        # The metadata already contains the total size including all children
+        total_size = 0
         if isinstance(entry[0], dict):
-            return entry[0].get('asize', 0) + entry[0].get('dsize', 0)
+            # Add the directory/file's own size (inode)
+            total_size += entry[0].get('asize', 0) + entry[0].get('dsize', 0)
+        
+        # Recursively add all children's sizes
+        for i in range(1, len(entry)):
+            child = entry[i]
+            total_size += get_entry_size(child)
+        
+        return total_size
     return 0
 
 

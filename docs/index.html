@@ -304,6 +304,31 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        function calculateEntrySize(entry) {
+            // Calculate total size of an NCDU entry recursively
+            // In NCDU format, directory metadata contains only the inode size
+            // We need to recursively sum all children to get the total size
+            if (typeof entry === 'object' && !Array.isArray(entry)) {
+                // File entry: just return asize + dsize
+                return (entry.asize || 0) + (entry.dsize || 0);
+            } else if (Array.isArray(entry) && entry.length >= 1) {
+                // Entry is [metadata, children...]
+                let totalSize = 0;
+                if (typeof entry[0] === 'object') {
+                    // Add the directory/file's own size (inode)
+                    totalSize += (entry[0].asize || 0) + (entry[0].dsize || 0);
+                }
+                
+                // Recursively add all children's sizes
+                for (let i = 1; i < entry.length; i++) {
+                    totalSize += calculateEntrySize(entry[i]);
+                }
+                
+                return totalSize;
+            }
+            return 0;
+        }
+
         function sortEntries(entries, sortOrder) {
             // Sort entries by name or size
             // Entry format: [size, name, has_children]
@@ -343,10 +368,8 @@
                 });
             } else if (sortOrder === 'size') {
                 sorted.sort((a, b) => {
-                    const sizeA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object')
-                        ? ((a[0].asize || 0) + (a[0].dsize || 0)) : 0;
-                    const sizeB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object')
-                        ? ((b[0].asize || 0) + (b[0].dsize || 0)) : 0;
+                    const sizeA = calculateEntrySize(a);
+                    const sizeB = calculateEntrySize(b);
                     return sizeB - sizeA; // Descending order
                 });
             } else {
@@ -525,7 +548,7 @@
                 const meta = item[0];
                 if (typeof meta === 'object' && meta.name) {
                     const name = meta.name;
-                    const size = (meta.asize || 0) + (meta.dsize || 0);
+                    const size = calculateEntrySize(item);
                     const hasChildren = item.length > 1;
 
                     if (hasChildren) {
