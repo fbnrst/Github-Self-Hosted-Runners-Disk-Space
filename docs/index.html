@@ -648,18 +648,18 @@
                         if (e.target.closest('.tree-view')) {
                             return;
                         }
-                        
+
                         const wasExpanded = this.classList.contains('expanded');
-                        
+
                         // Collapse all other cards
                         document.querySelectorAll('.report-card').forEach(card => {
                             card.classList.remove('expanded');
                         });
-                        
+
                         // Toggle this card
                         if (!wasExpanded) {
                             this.classList.add('expanded');
-                            
+
                             // Load tree view if not already loaded
                             const treeView = this.querySelector('.tree-view');
                             if (treeView && treeView.dataset.loaded !== 'true') {
@@ -725,11 +725,11 @@
         async function reloadExpandedViews() {
             // Re-render expanded tree views with the new sort order
             const expandedCards = document.querySelectorAll('.report-card.expanded');
-            
+
             for (const card of expandedCards) {
                 const architecture = card.dataset.architecture;
                 const treeView = card.querySelector('.tree-view');
-                
+
                 if (treeView) {
                     // Reload metadata
                     const data = await loadMetadata(architecture);
