@@ -32,8 +32,7 @@ The data collection workflow (`collect-disk-space.yml`) runs weekly to gather di
 ### Pages Deployment Workflow
 
 The pages deployment workflow (`deploy-pages.yml`) runs independently:
-- **Trigger**: Automatically on push to `docs/` directory
-- **Trigger**: Can also be manually triggered via `workflow_dispatch`
+- **Trigger**: Automatically on push to `docs/` directory (e.g., when data is updated or layout changes)
 - **Process**: Deploys the `docs/` directory to GitHub Pages
 
 This separation allows you to:
@@ -64,11 +63,11 @@ You can manually trigger the workflows from the Actions tab:
 
 The data collection workflow runs automatically:
 - **Schedule**: Every Monday at 00:00 UTC
-- **Trigger**: Can also be manually triggered via `workflow_dispatch`
 
 The pages deployment workflow runs automatically:
 - **Trigger**: On push to `docs/` directory (e.g., when data is updated or layout changes)
-- **Trigger**: Can also be manually triggered via `workflow_dispatch`
+
+Both workflows can also be manually triggered via `workflow_dispatch` (see "Manual Workflow Trigger" section above).
 
 ## Technical Details
 
