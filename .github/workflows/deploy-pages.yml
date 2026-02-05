@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'docs/**'
-      - '!docs/data/**' # Exclude data files since they're now in a separate branch
   workflow_dispatch: # Allow manual triggering
 
 permissions:
