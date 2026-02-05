@@ -328,19 +328,15 @@
                     seenInodes.add(ino);
                 }
 
-                // Return asize + dsize
-                return (entry.asize || 0) + (entry.dsize || 0);
+                // Return dsize (disk usage) only, not asize + dsize
+                return entry.dsize || 0;
             } else if (Array.isArray(entry) && entry.length >= 1) {
-                // Entry is [metadata, children...]
+                // Directory entry: [metadata, children...]
+                // According to ncdu format, directory size = sum of children only
+                // The metadata dict contains only the directory inode size, not the total
                 let totalSize = 0;
-                if (typeof entry[0] === 'object') {
-                    // Add the directory/file's own size (metadata)
-                    // Note: We don't check inode for directories as they typically don't
-                    // participate in hard linking, and skipping children would be incorrect
-                    totalSize += (entry[0].asize || 0) + (entry[0].dsize || 0);
-                }
 
-                // Recursively add all children's sizes
+                // Sum only children's sizes, not the directory metadata
                 for (let i = 1; i < entry.length; i++) {
                     totalSize += calculateEntrySize(entry[i], seenInodes);
                 }
@@ -638,8 +634,8 @@
                 // File entry (not a directory)
                 const name = item.name;
                 // Use cached size (set by sortFullEntries).
-                // For file entries, asize + dsize is correct as files have no children.
-                const size = item._cachedSize !== undefined ? item._cachedSize : ((item.asize || 0) + (item.dsize || 0));
+                // For file entries, use dsize (disk usage) only
+                const size = item._cachedSize !== undefined ? item._cachedSize : (item.dsize || 0);
                 content += `<span class="tree-item-dir">${name}</span>`;
                 content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
             }
