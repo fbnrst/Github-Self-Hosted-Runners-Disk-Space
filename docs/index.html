@@ -260,7 +260,7 @@
 
             let content = indent;
 
-            if (Array.isArray(item) && item.length > 2) {
+            if (Array.isArray(item) && item.length >= 2) {
                 // NCDU format: [size, name, children...]
                 const size = item[0];
                 const name = item[1];
