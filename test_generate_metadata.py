@@ -23,11 +23,11 @@ def test_file_size():
     """Test that file sizes are correctly calculated."""
     # A file with 1000 bytes apparent size, 4096 disk usage
     file_entry = {"name": "file.txt", "asize": 1000, "dsize": 4096, "ino": 123}
-    
+
     # Should return dsize (disk usage)
     result = get_entry_size(file_entry)
     expected = 4096
-    
+
     print(f"Test file_size: {result} == {expected} ? {'PASS' if result == expected else 'FAIL'}")
     assert result == expected, f"Expected {expected}, got {result}"
 
@@ -43,10 +43,10 @@ def test_directory_excludes_metadata():
         {"name": "file1.txt", "asize": 1000, "dsize": 4096, "ino": 1},
         {"name": "file2.txt", "asize": 2000, "dsize": 4096, "ino": 2}
     ]
-    
+
     result = get_entry_size(dir_entry)
     expected = 8192  # Sum of children's dsize only
-    
+
     print(f"Test directory_excludes_metadata: {result} == {expected} ? {'PASS' if result == expected else 'FAIL'}")
     assert result == expected, f"Expected {expected}, got {result}"
 
@@ -66,10 +66,10 @@ def test_nested_directories():
         ],
         {"name": "file2.txt", "asize": 2000, "dsize": 4096, "ino": 2}
     ]
-    
+
     result = get_entry_size(root_entry)
     expected = 8192  # 4096 + 4096
-    
+
     print(f"Test nested_directories: {result} == {expected} ? {'PASS' if result == expected else 'FAIL'}")
     assert result == expected, f"Expected {expected}, got {result}"
 
@@ -82,10 +82,10 @@ def test_hardlink_deduplication():
         {"name": "file1.txt", "asize": 1000, "dsize": 4096, "ino": 123},
         {"name": "file1_link.txt", "asize": 1000, "dsize": 4096, "ino": 123}  # Same inode
     ]
-    
+
     result = get_entry_size(dir_entry)
     expected = 4096  # Only count once
-    
+
     print(f"Test hardlink_deduplication: {result} == {expected} ? {'PASS' if result == expected else 'FAIL'}")
     assert result == expected, f"Expected {expected}, got {result}"
 
@@ -95,17 +95,17 @@ def test_empty_directory():
     empty_dir = [
         {"name": "emptydir", "asize": 4096, "dsize": 4096}
     ]
-    
+
     result = get_entry_size(empty_dir)
     expected = 0  # No children
-    
+
     print(f"Test empty_directory: {result} == {expected} ? {'PASS' if result == expected else 'FAIL'}")
     assert result == expected, f"Expected {expected}, got {result}"
 
 
 if __name__ == "__main__":
     print("Running tests for generate-metadata.py size calculations\n")
-    
+
     try:
         test_file_size()
         test_directory_excludes_metadata()
