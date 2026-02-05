@@ -231,7 +231,7 @@
         // Configuration for data source
         // Data files are stored in a separate 'data' branch to avoid conflicts with page design PRs
         const DATA_BASE_URL = 'https://raw.githubusercontent.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/data/data/';
-        
+
         // Cache for full JSON data (lazy loaded)
         const fullDataCache = {};
         // Current sort order: 'name' or 'size'
@@ -253,7 +253,7 @@
             // Sort entries by name or size
             // Entry format: [size, name, has_children]
             const sorted = [...entries]; // Create a copy to avoid mutating original
-            
+
             if (sortOrder === 'name') {
                 sorted.sort((a, b) => {
                     const nameA = (Array.isArray(a) && a.length >= 2) ? a[1] : '';
@@ -271,7 +271,7 @@
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
                 return sortEntries(entries, 'size');
             }
-            
+
             return sorted;
         }
 
@@ -279,7 +279,7 @@
             // Sort full NCDU entries
             // Full entry format: [{name, asize, dsize}, ...children]
             const sorted = [...entries];
-            
+
             if (sortOrder === 'name') {
                 sorted.sort((a, b) => {
                     const nameA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') ? (a[0].name || '') : '';
@@ -288,9 +288,9 @@
                 });
             } else if (sortOrder === 'size') {
                 sorted.sort((a, b) => {
-                    const sizeA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') 
+                    const sizeA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object')
                         ? ((a[0].asize || 0) + (a[0].dsize || 0)) : 0;
-                    const sizeB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object') 
+                    const sizeB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object')
                         ? ((b[0].asize || 0) + (b[0].dsize || 0)) : 0;
                     return sizeB - sizeA; // Descending order
                 });
@@ -299,7 +299,7 @@
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
                 return sortFullEntries(entries, 'size');
             }
-            
+
             return sorted;
         }
 
@@ -394,7 +394,7 @@
                                         // Get children (skip first element which is metadata)
                                         const childEntries = entry.slice(1, Math.min(entry.length, MAX_CHILDREN_DISPLAY + 1));
                                         const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
-                                        
+
                                         // Render sorted children
                                         for (const child of sortedChildren) {
                                             await renderFullTreeItem(child, level + 1, children, arch, itemPath);
@@ -506,7 +506,7 @@
                                     // Get children (skip first element which is metadata)
                                     const childEntries = item.slice(1, Math.min(item.length, MAX_CHILDREN_DISPLAY + 1));
                                     const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
-                                    
+
                                     // Render sorted children
                                     for (const child of sortedChildren) {
                                         await renderFullTreeItem(child, level + 1, children, architecture, itemPath);
@@ -648,7 +648,7 @@
                             reloadReportsWithSort();
                         }
                     });
-                    
+
                     sortListenersInitialized = true;
                 }
 
