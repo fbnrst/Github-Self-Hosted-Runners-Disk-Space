@@ -227,13 +227,13 @@
                     if (sizeCache.has(item)) {
                         return sizeCache.get(item);
                     }
-                    
+
                     // Directory: sum all children
                     let total = 0;
                     for (let i = 1; i < item.length; i++) {
                         total += calculateSize(item[i]);
                     }
-                    
+
                     // Cache the result
                     sizeCache.set(item, total);
                     return total;
@@ -258,7 +258,7 @@
                 const metadata = item[0];
                 const name = metadata.name || 'unknown';
                 const hasChildren = item.length > 1;
-                
+
                 // For performance, don't calculate size for deeply nested items
                 const size = skipSizeCalc || level > MAX_AUTO_CALC_DEPTH ? 0 : calculateSize(item);
 
@@ -286,7 +286,7 @@
                         const children = this.nextElementSibling;
                         if (expandable && children) {
                             expandable.classList.toggle('expanded');
-                            
+
                             // Lazy load children on first expand
                             if (!children.classList.contains('loaded')) {
                                 children.innerHTML = '';
@@ -295,7 +295,7 @@
                                 }
                                 children.classList.add('loaded');
                             }
-                            
+
                             children.classList.toggle('visible');
                         }
                     });
@@ -309,7 +309,7 @@
                 // File: {name, asize, dsize, ...}
                 const name = item.name || 'unknown';
                 const size = item.dsize || 0;
-                
+
                 content += `<span class="tree-item-name">📄 ${name}</span>`;
                 content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
             }
@@ -364,10 +364,10 @@
 
                     const rootEntry = parseNcduData(data.data);
                     if (!rootEntry) return;
-                    
+
                     // Calculate root size in the background to avoid blocking
                     const rootSizeText = '(calculating...)';
-                    
+
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
                     }
@@ -389,7 +389,7 @@
                     // Render tree - show children of root directory
                     const treeView = document.getElementById(`tree-${data.architecture}`);
                     const children = rootEntry.slice(1); // Skip root metadata
-                    
+
                     // Render items immediately
                     children.slice(0, MAX_VISIBLE_ITEMS).forEach(entry => {
                         renderTreeItem(entry, 0, treeView, false);
@@ -401,7 +401,7 @@
                         moreDiv.innerHTML = `<em>... ${children.length - MAX_VISIBLE_ITEMS} more items</em>`;
                         treeView.appendChild(moreDiv);
                     }
-                    
+
                     // Calculate total size asynchronously to avoid blocking the UI
                     setTimeout(() => {
                         const rootSize = calculateSize(rootEntry);
