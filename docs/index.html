@@ -379,27 +379,42 @@
         function sortFullEntries(entries, sortOrder) {
             // Sort full NCDU entries
             // Full entry format: [{name, asize, dsize}, ...children]
-            const sorted = [...entries];
 
             if (sortOrder === 'name') {
+                const sorted = [...entries];
                 sorted.sort((a, b) => {
                     const nameA = (Array.isArray(a) && a.length > 0 && typeof a[0] === 'object') ? (a[0].name || '') : '';
                     const nameB = (Array.isArray(b) && b.length > 0 && typeof b[0] === 'object') ? (b[0].name || '') : '';
                     return nameA.localeCompare(nameB);
                 });
+                return sorted;
             } else if (sortOrder === 'size') {
-                sorted.sort((a, b) => {
-                    const sizeA = calculateEntrySize(a);
-                    const sizeB = calculateEntrySize(b);
-                    return sizeB - sizeA; // Descending order
+                // Calculate all sizes with a shared seenInodes set to avoid
+                // overestimating sizes when hard links exist between sibling entries
+                const sharedInodes = new Set();
+                const entriesWithSizes = entries.map(entry => ({
+                    entry,
+                    size: calculateEntrySize(entry, sharedInodes)
+                }));
+
+                // Sort by size descending
+                entriesWithSizes.sort((a, b) => b.size - a.size);
+
+                // Cache the calculated sizes on the entries themselves
+                entriesWithSizes.forEach(({ entry, size }) => {
+                    if (Array.isArray(entry) && entry.length > 0 && typeof entry[0] === 'object') {
+                        entry[0]._cachedSize = size;
+                    } else if (typeof entry === 'object') {
+                        entry._cachedSize = size;
+                    }
                 });
+
+                return entriesWithSizes.map(item => item.entry);
             } else {
                 // Default to size sorting for invalid sort orders
                 console.warn(`Invalid sort order '${sortOrder}', defaulting to 'size'`);
                 return sortFullEntries(entries, 'size');
             }
-
-            return sorted;
         }
 
         function formatDate(dateString) {
@@ -569,7 +584,8 @@
                 const meta = item[0];
                 if (typeof meta === 'object' && meta.name) {
                     const name = meta.name;
-                    const size = calculateEntrySize(item);
+                    // Use cached size if available, otherwise calculate
+                    const size = meta._cachedSize !== undefined ? meta._cachedSize : calculateEntrySize(item);
                     const hasChildren = item.length > 1;
 
                     if (hasChildren) {
@@ -621,7 +637,8 @@
             } else if (typeof item === 'object' && item.name) {
                 // File entry (not a directory)
                 const name = item.name;
-                const size = (item.asize || 0) + (item.dsize || 0);
+                // Use cached size if available, otherwise calculate from asize + dsize
+                const size = item._cachedSize !== undefined ? item._cachedSize : ((item.asize || 0) + (item.dsize || 0));
                 content += `<span class="tree-item-dir">${name}</span>`;
                 content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
             }
