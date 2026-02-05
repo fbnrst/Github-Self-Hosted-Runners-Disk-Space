@@ -1,4 +1,4 @@
-name: Disk Space Overview
+name: Collect Disk Space Data
 
 on:
   schedule:
@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   collect-disk-space-x86:
@@ -24,26 +22,29 @@ jobs:
       - name: Generate disk space report
         run: |
           # Create output directory
-          mkdir -p disk-reports
+          mkdir -p docs/data
 
           # Run ncdu and export to JSON
-          sudo ncdu / -o disk-reports/x86_64-raw.json -x || true
+          sudo ncdu / -o docs/data/x86_64-raw.json -x || true
 
           # Add metadata
-          echo "{" > disk-reports/x86_64.json
-          echo "  \"architecture\": \"x86_64\"," >> disk-reports/x86_64.json
+          echo "{" > docs/data/x86_64.json
+          echo "  \"architecture\": \"x86_64\"," >> docs/data/x86_64.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "  \"timestamp\": \"$timestamp\"," >> disk-reports/x86_64.json
-          echo "  \"runner\": \"ubuntu-latest\"," >> disk-reports/x86_64.json
-          data=$(cat disk-reports/x86_64-raw.json)
-          echo "  \"data\": $data" >> disk-reports/x86_64.json
-          echo "}" >> disk-reports/x86_64.json
+          echo "  \"timestamp\": \"$timestamp\"," >> docs/data/x86_64.json
+          echo "  \"runner\": \"ubuntu-latest\"," >> docs/data/x86_64.json
+          data=$(cat docs/data/x86_64-raw.json)
+          echo "  \"data\": $data" >> docs/data/x86_64.json
+          echo "}" >> docs/data/x86_64.json
+
+          # Remove raw file
+          rm docs/data/x86_64-raw.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: disk-report-x86_64
-          path: disk-reports/x86_64.json
+          path: docs/data/x86_64.json
 
   collect-disk-space-arm64:
     runs-on: ubuntu-latest-arm64
@@ -57,34 +58,34 @@ jobs:
       - name: Generate disk space report
         run: |
           # Create output directory
-          mkdir -p disk-reports
+          mkdir -p docs/data
 
           # Run ncdu and export to JSON
-          sudo ncdu / -o disk-reports/aarch64-raw.json -x || true
+          sudo ncdu / -o docs/data/aarch64-raw.json -x || true
 
           # Add metadata
-          echo "{" > disk-reports/aarch64.json
-          echo "  \"architecture\": \"aarch64\"," >> disk-reports/aarch64.json
+          echo "{" > docs/data/aarch64.json
+          echo "  \"architecture\": \"aarch64\"," >> docs/data/aarch64.json
           timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "  \"timestamp\": \"$timestamp\"," >> disk-reports/aarch64.json
+          echo "  \"timestamp\": \"$timestamp\"," >> docs/data/aarch64.json
           runner="ubuntu-latest-arm64"
-          echo "  \"runner\": \"$runner\"," >> disk-reports/aarch64.json
-          data=$(cat disk-reports/aarch64-raw.json)
-          echo "  \"data\": $data" >> disk-reports/aarch64.json
-          echo "}" >> disk-reports/aarch64.json
+          echo "  \"runner\": \"$runner\"," >> docs/data/aarch64.json
+          data=$(cat docs/data/aarch64-raw.json)
+          echo "  \"data\": $data" >> docs/data/aarch64.json
+          echo "}" >> docs/data/aarch64.json
+
+          # Remove raw file
+          rm docs/data/aarch64-raw.json
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: disk-report-aarch64
-          path: disk-reports/aarch64.json
+          path: docs/data/aarch64.json
 
-  publish-to-pages:
+  commit-reports:
     needs: [collect-disk-space-x86, collect-disk-space-arm64]
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -101,14 +102,14 @@ jobs:
           name: disk-report-aarch64
           path: docs/data
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'docs'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit and push reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data/*.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update disk space reports [skip ci]"
+            git push
+          fi
