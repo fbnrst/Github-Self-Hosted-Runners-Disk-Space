@@ -110,6 +110,11 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
+            # Note: JSON files can be large (typically 1-10 MB for full filesystem scans)
+            # GitHub has a 100 MB file size limit and 100 GB repository size limit.
+            # NCDU JSON format is relatively compact, but scanning entire filesystems
+            # including /proc, /sys can generate large files. Consider using --exclude
+            # for very large directories if files exceed ~50 MB to stay well under limits.
             git commit -m "Update disk space reports"
             git push
           fi
