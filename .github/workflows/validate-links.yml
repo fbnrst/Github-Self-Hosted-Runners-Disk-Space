@@ -1,0 +1,24 @@
+---
+name: Validate External Links
+
+'on':
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '*.md'
+  schedule:
+    - cron: '15 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  link-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate URLs in documentation
+        uses: urlstechie/urlchecker-action@master
+        with:
+          file_types: .md,.html
+          timeout: 10
+          retry_count: 2
