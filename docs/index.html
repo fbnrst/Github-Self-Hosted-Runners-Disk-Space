@@ -182,6 +182,9 @@
     </div>
 
     <script>
+        // Cache for full JSON data (lazy loaded)
+        const fullDataCache = {};
+        
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
             const k = 1024;
@@ -203,76 +206,233 @@
         }
 
         function parseNcduData(data) {
-            // NCDU format: [version, timestamp, metadata, entries...]
+            // NCDU format: [version, timestamp, metadata, root_entry, ...children]
             if (Array.isArray(data) && data.length > 3) {
-                return data.slice(3);
+                return data[3]; // Return the root entry
             }
             return [];
         }
+        
+        async function loadFullData(architecture) {
+            // Load full JSON data only when needed
+            if (fullDataCache[architecture]) {
+                return fullDataCache[architecture];
+            }
+            
+            try {
+                const response = await fetch(`data/${architecture}.json`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load full ${architecture} data`);
+                }
+                const data = await response.json();
+                fullDataCache[architecture] = data.data;
+                return data.data;
+            } catch (error) {
+                console.error(`Error loading full ${architecture} data:`, error);
+                return null;
+            }
+        }
 
-        function renderTreeItem(item, level = 0, parentDiv) {
+        async function renderTreeItem(item, level, parentDiv, architecture, path = []) {
             const div = document.createElement('div');
             div.className = 'tree-item';
 
             const indent = '&nbsp;'.repeat(level * 4);
-            const isDir = item.name && item.name.endsWith('/');
-
             let content = indent;
 
+            // Handle metadata-only format: [size, name, has_children]
             if (Array.isArray(item) && item.length >= 2) {
-                // NCDU format: [size, name, children...]
                 const size = item[0];
                 const name = item[1];
-                const hasChildren = item.length > 2;
+                const hasChildren = item.length > 2 ? item[2] : false;
 
                 if (hasChildren) {
-                    content += `<span class="expandable">`;
-                }
-
-                content += `<span class="tree-item-dir">${name}</span>`;
-                content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
-
-                if (hasChildren) {
+                    content += `<span class="expandable" data-arch="${architecture}" data-path='${JSON.stringify([...path, name])}'>`;
+                    content += `<span class="tree-item-dir">${name}</span>`;
+                    content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
                     content += `</span>`;
 
                     const childrenDiv = document.createElement('div');
                     childrenDiv.className = 'children';
+                    childrenDiv.dataset.loaded = 'false';
 
-                    div.addEventListener('click', function(e) {
+                    div.addEventListener('click', async function(e) {
                         e.stopPropagation();
                         const expandable = this.querySelector('.expandable');
                         const children = this.nextElementSibling;
+                        
                         if (expandable && children) {
+                            const isExpanded = expandable.classList.contains('expanded');
                             expandable.classList.toggle('expanded');
                             children.classList.toggle('visible');
+                            
+                            // Lazy load children on first expand
+                            if (!isExpanded && children.dataset.loaded === 'false') {
+                                const arch = expandable.dataset.arch;
+                                const itemPath = JSON.parse(expandable.dataset.path);
+                                
+                                // Show loading indicator
+                                children.innerHTML = '<div style="padding: 10px; color: #666;">Loading...</div>';
+                                
+                                // Load full data and find the specific entry
+                                const fullData = await loadFullData(arch);
+                                if (fullData) {
+                                    const entry = findEntryByPath(fullData, itemPath);
+                                    if (entry && Array.isArray(entry) && entry.length > 1) {
+                                        children.innerHTML = '';
+                                        // Render children (skip first element which is metadata)
+                                        for (let i = 1; i < Math.min(entry.length, 51); i++) {
+                                            await renderFullTreeItem(entry[i], level + 1, children, arch, itemPath);
+                                        }
+                                        if (entry.length > 51) {
+                                            const moreDiv = document.createElement('div');
+                                            moreDiv.className = 'tree-item';
+                                            moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (entry.length - 51) + ' more items</em>';
+                                            children.appendChild(moreDiv);
+                                        }
+                                        children.dataset.loaded = 'true';
+                                    }
+                                }
+                            }
                         }
                     });
-
-                    // Render children
-                    for (let i = 2; i < item.length; i++) {
-                        renderTreeItem(item[i], level + 1, childrenDiv);
-                    }
 
                     div.innerHTML = content;
                     parentDiv.appendChild(div);
                     parentDiv.appendChild(childrenDiv);
                     return;
+                } else {
+                    content += `<span class="tree-item-dir">${name}</span>`;
+                    content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
                 }
             }
 
             div.innerHTML = content;
             parentDiv.appendChild(div);
         }
+        
+        function findEntryByPath(ncduData, path) {
+            // Navigate through NCDU structure to find entry at path
+            // ncduData[3] is root entry: [metadata, ...children]
+            let current = ncduData[3];
+            
+            for (const name of path) {
+                if (!Array.isArray(current) || current.length <= 1) {
+                    return null;
+                }
+                
+                // Find child with matching name (skip index 0 which is metadata)
+                let found = false;
+                for (let i = 1; i < current.length; i++) {
+                    const child = current[i];
+                    let childName = null;
+                    
+                    if (Array.isArray(child) && child.length > 0 && typeof child[0] === 'object') {
+                        childName = child[0].name;
+                    } else if (typeof child === 'object' && child.name) {
+                        childName = child.name;
+                    }
+                    
+                    if (childName === name) {
+                        current = child;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    return null;
+                }
+            }
+            
+            return current;
+        }
+        
+        async function renderFullTreeItem(item, level, parentDiv, architecture, parentPath = []) {
+            // Render item from full NCDU data
+            const div = document.createElement('div');
+            div.className = 'tree-item';
 
-        async function loadReport(architecture) {
+            const indent = '&nbsp;'.repeat(level * 4);
+            let content = indent;
+
+            if (Array.isArray(item) && item.length > 0) {
+                // Entry is [metadata, ...children]
+                const meta = item[0];
+                if (typeof meta === 'object' && meta.name) {
+                    const name = meta.name;
+                    const size = (meta.asize || 0) + (meta.dsize || 0);
+                    const hasChildren = item.length > 1;
+                    
+                    if (hasChildren) {
+                        content += `<span class="expandable" data-arch="${architecture}" data-path='${JSON.stringify([...parentPath, name])}'>`;
+                        content += `<span class="tree-item-dir">${name}</span>`;
+                        content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+                        content += `</span>`;
+
+                        const childrenDiv = document.createElement('div');
+                        childrenDiv.className = 'children';
+                        childrenDiv.dataset.loaded = 'false';
+
+                        div.addEventListener('click', async function(e) {
+                            e.stopPropagation();
+                            const expandable = this.querySelector('.expandable');
+                            const children = this.nextElementSibling;
+                            
+                            if (expandable && children) {
+                                const isExpanded = expandable.classList.contains('expanded');
+                                expandable.classList.toggle('expanded');
+                                children.classList.toggle('visible');
+                                
+                                // Load children on first expand
+                                if (!isExpanded && children.dataset.loaded === 'false') {
+                                    const itemPath = JSON.parse(expandable.dataset.path);
+                                    children.innerHTML = '';
+                                    // Render children (skip first element which is metadata)
+                                    for (let i = 1; i < Math.min(item.length, 51); i++) {
+                                        await renderFullTreeItem(item[i], level + 1, children, architecture, itemPath);
+                                    }
+                                    if (item.length > 51) {
+                                        const moreDiv = document.createElement('div');
+                                        moreDiv.className = 'tree-item';
+                                        moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (item.length - 51) + ' more items</em>';
+                                        children.appendChild(moreDiv);
+                                    }
+                                    children.dataset.loaded = 'true';
+                                }
+                            }
+                        });
+
+                        div.innerHTML = content;
+                        parentDiv.appendChild(div);
+                        parentDiv.appendChild(childrenDiv);
+                        return;
+                    } else {
+                        content += `<span class="tree-item-dir">${name}</span>`;
+                        content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+                    }
+                }
+            } else if (typeof item === 'object' && item.name) {
+                // File entry (not a directory)
+                const name = item.name;
+                const size = (item.asize || 0) + (item.dsize || 0);
+                content += `<span class="tree-item-dir">${name}</span>`;
+                content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+            }
+
+            div.innerHTML = content;
+            parentDiv.appendChild(div);
+        }
+
+        async function loadMetadata(architecture) {
             try {
-                const response = await fetch(`data/${architecture}.json`);
+                const response = await fetch(`data/${architecture}-metadata.json`);
                 if (!response.ok) {
-                    throw new Error(`Failed to load ${architecture} report`);
+                    throw new Error(`Failed to load ${architecture} metadata`);
                 }
                 return await response.json();
             } catch (error) {
-                console.error(`Error loading ${architecture} report:`, error);
+                console.error(`Error loading ${architecture} metadata:`, error);
                 return null;
             }
         }
@@ -284,12 +444,13 @@
             const lastUpdatedEl = document.getElementById('lastUpdated');
 
             try {
-                const [x86Report, armReport] = await Promise.all([
-                    loadReport('x86_64'),
-                    loadReport('aarch64')
+                // Load lightweight metadata files first
+                const [x86Metadata, armMetadata] = await Promise.all([
+                    loadMetadata('x86_64'),
+                    loadMetadata('aarch64')
                 ]);
 
-                if (!x86Report && !armReport) {
+                if (!x86Metadata && !armMetadata) {
                     throw new Error('No reports available. Please wait for the workflow to run.');
                 }
 
@@ -298,18 +459,17 @@
 
                 let latestTimestamp = null;
 
-                // Render each report
+                // Render each report using metadata
                 [
-                    { data: x86Report, title: 'x86_64 (Intel/AMD)' },
-                    { data: armReport, title: 'aarch64 (ARM64)' }
+                    { data: x86Metadata, title: 'x86_64 (Intel/AMD)' },
+                    { data: armMetadata, title: 'aarch64 (ARM64)' }
                 ].forEach(({ data, title }) => {
                     if (!data) return;
 
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
 
-                    const entries = parseNcduData(data.data);
-                    const rootSize = entries.length > 0 && Array.isArray(entries[0]) ? entries[0][0] : 0;
+                    const totalSize = data.total_size || 0;
 
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
@@ -321,7 +481,7 @@
                             <div class="report-meta">
                                 <span>Runner: ${data.runner}</span>
                                 <span>Updated: ${formatDate(data.timestamp)}</span>
-                                <span>Total: ${formatBytes(rootSize)}</span>
+                                <span>Total: ${formatBytes(totalSize)}</span>
                             </div>
                         </div>
                         <div class="tree-view" id="tree-${data.architecture}"></div>
@@ -329,16 +489,18 @@
 
                     reportsEl.appendChild(reportCard);
 
-                    // Render tree
+                    // Render tree using lightweight metadata
                     const treeView = document.getElementById(`tree-${data.architecture}`);
-                    entries.slice(0, 20).forEach(entry => {
-                        renderTreeItem(entry, 0, treeView);
+                    const topEntries = data.top_entries || [];
+                    
+                    topEntries.forEach(entry => {
+                        renderTreeItem(entry, 0, treeView, data.architecture, []);
                     });
 
-                    if (entries.length > 20) {
+                    if (data.total_entries > topEntries.length) {
                         const moreDiv = document.createElement('div');
                         moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${entries.length - 20} more items</em>`;
+                        moreDiv.innerHTML = `<em>... ${data.total_entries - topEntries.length} more items (expand directories to load)</em>`;
                         treeView.appendChild(moreDiv);
                     }
                 });
