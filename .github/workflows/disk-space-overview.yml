@@ -27,10 +27,7 @@ jobs:
           mkdir -p disk-reports
 
           # Run ncdu and export to JSON
-          # We'll scan the root directory (excluding some large dirs)
-          sudo ncdu / -o disk-reports/x86_64-raw.json -x \
-            --exclude /proc --exclude /sys --exclude /dev \
-            --exclude /run --exclude /tmp || true
+          sudo ncdu / -o disk-reports/x86_64-raw.json -x || true
 
           # Add metadata
           echo "{" > disk-reports/x86_64.json
@@ -63,9 +60,7 @@ jobs:
           mkdir -p disk-reports
 
           # Run ncdu and export to JSON
-          sudo ncdu / -o disk-reports/aarch64-raw.json -x \
-            --exclude /proc --exclude /sys --exclude /dev \
-            --exclude /run --exclude /tmp || true
+          sudo ncdu / -o disk-reports/aarch64-raw.json -x || true
 
           # Add metadata
           echo "{" > disk-reports/aarch64.json
