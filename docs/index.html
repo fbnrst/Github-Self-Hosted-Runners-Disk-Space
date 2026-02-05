@@ -232,6 +232,10 @@
         const fullDataCache = {};
         // Current sort order: 'name' or 'size'
         let currentSortOrder = 'size';
+        // Maximum number of children to display
+        const MAX_CHILDREN_DISPLAY = 50;
+        // Track if event listeners have been set up
+        let sortListenersInitialized = false;
 
         function formatBytes(bytes) {
             if (bytes === 0) return '0 B';
@@ -376,17 +380,17 @@
                                     if (entry && Array.isArray(entry) && entry.length > 1) {
                                         children.innerHTML = '';
                                         // Get children (skip first element which is metadata)
-                                        const childEntries = entry.slice(1, Math.min(entry.length, 51));
+                                        const childEntries = entry.slice(1, Math.min(entry.length, MAX_CHILDREN_DISPLAY + 1));
                                         const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
                                         
                                         // Render sorted children
                                         for (const child of sortedChildren) {
                                             await renderFullTreeItem(child, level + 1, children, arch, itemPath);
                                         }
-                                        if (entry.length > 51) {
+                                        if (entry.length > MAX_CHILDREN_DISPLAY + 1) {
                                             const moreDiv = document.createElement('div');
                                             moreDiv.className = 'tree-item';
-                                            moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (entry.length - 51) + ' more items</em>';
+                                            moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (entry.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
                                             children.appendChild(moreDiv);
                                         }
                                         children.dataset.loaded = 'true';
@@ -488,17 +492,17 @@
                                     const itemPath = JSON.parse(expandable.dataset.path);
                                     children.innerHTML = '';
                                     // Get children (skip first element which is metadata)
-                                    const childEntries = item.slice(1, Math.min(item.length, 51));
+                                    const childEntries = item.slice(1, Math.min(item.length, MAX_CHILDREN_DISPLAY + 1));
                                     const sortedChildren = sortFullEntries(childEntries, currentSortOrder);
                                     
                                     // Render sorted children
                                     for (const child of sortedChildren) {
                                         await renderFullTreeItem(child, level + 1, children, architecture, itemPath);
                                     }
-                                    if (item.length > 51) {
+                                    if (item.length > MAX_CHILDREN_DISPLAY + 1) {
                                         const moreDiv = document.createElement('div');
                                         moreDiv.className = 'tree-item';
-                                        moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (item.length - 51) + ' more items</em>';
+                                        moreDiv.innerHTML = indent + '&nbsp;&nbsp;&nbsp;&nbsp;<em>... ' + (item.length - MAX_CHILDREN_DISPLAY - 1) + ' more items</em>';
                                         children.appendChild(moreDiv);
                                     }
                                     children.dataset.loaded = 'true';
@@ -617,20 +621,24 @@
                 const sortControlsEl = document.getElementById('sortControls');
                 sortControlsEl.style.display = 'flex';
 
-                // Add event listeners for sort controls
-                document.getElementById('sortByName').addEventListener('change', function() {
-                    if (this.checked) {
-                        currentSortOrder = 'name';
-                        reloadReportsWithSort();
-                    }
-                });
+                // Add event listeners for sort controls (only once)
+                if (!sortListenersInitialized) {
+                    document.getElementById('sortByName').addEventListener('change', function() {
+                        if (this.checked) {
+                            currentSortOrder = 'name';
+                            reloadReportsWithSort();
+                        }
+                    });
 
-                document.getElementById('sortBySize').addEventListener('change', function() {
-                    if (this.checked) {
-                        currentSortOrder = 'size';
-                        reloadReportsWithSort();
-                    }
-                });
+                    document.getElementById('sortBySize').addEventListener('change', function() {
+                        if (this.checked) {
+                            currentSortOrder = 'size';
+                            reloadReportsWithSort();
+                        }
+                    });
+                    
+                    sortListenersInitialized = true;
+                }
 
             } catch (error) {
                 loadingEl.style.display = 'none';
