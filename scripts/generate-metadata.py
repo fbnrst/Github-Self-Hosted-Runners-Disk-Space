@@ -105,7 +105,7 @@ def generate_metadata(input_file, output_file, top_entries=None):
                 total_size = get_entry_size(root_entry)
                 metadata["total_size"] = total_size
 
-            # Get all child entries (starting from index 1)
+            # Get child entries (starting from index 1), limited by top_entries if specified
             # Note: Each entry gets its own seen_inodes set, so sizes represent
             # the apparent size of each entry independently. This means the sum
             # of top entries may exceed total_size if there are hard links between
