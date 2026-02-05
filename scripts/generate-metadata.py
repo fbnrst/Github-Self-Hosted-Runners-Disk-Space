@@ -77,7 +77,7 @@ def get_entry_size(entry, seen_inodes=None):
     return 0
 
 
-def generate_metadata(input_file, output_file, top_entries=20):
+def generate_metadata(input_file, output_file):
     """Generate metadata file with lightweight summary."""
     with open(input_file, 'r') as f:
         data = json.load(f)
@@ -105,13 +105,13 @@ def generate_metadata(input_file, output_file, top_entries=20):
                 total_size = get_entry_size(root_entry)
                 metadata["total_size"] = total_size
 
-            # Get top N child entries (starting from index 1)
+            # Get all child entries (starting from index 1)
             # Calculate sizes with a shared seen_inodes set to avoid overestimating
             # when hard links exist between top-level entries
             top_level_entries = []
             shared_inodes = set()
             count = 0
-            for i in range(1, min(len(root_entry), top_entries + 1)):
+            for i in range(1, len(root_entry)):
                 entry = root_entry[i]
 
                 if isinstance(entry, list) and len(entry) > 0:
