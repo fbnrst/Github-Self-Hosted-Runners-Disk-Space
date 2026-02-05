@@ -58,11 +58,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Git LFS
-        run: |
-          git lfs install
-          echo "Git LFS version: $(git lfs version)"
-
       - name: Download x86_64 report
         uses: actions/download-artifact@v4
         with:
@@ -97,7 +92,7 @@ jobs:
         run: |
           python3 scripts/generate-metadata.py
 
-      - name: Commit and push reports to data branch with LFS
+      - name: Commit and push reports to data branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -116,8 +111,6 @@ jobs:
           if git ls-remote --heads origin data | grep -q data; then
             # Data branch exists, check it out
             git checkout data
-            # Pull LFS files if they exist
-            git lfs pull || true
             # Remove all tracked files (git rm only removes tracked files, not .git)
             git rm -rf . || true
           else
@@ -127,25 +120,16 @@ jobs:
             git rm -rf . || true
           fi
 
-          # Setup Git LFS tracking for JSON files in data directory
-          echo "data/*.json filter=lfs diff=lfs merge=lfs -text" > .gitattributes
-
           # Copy data files from temp location
           mkdir -p data
           cp "$TMP_DATA_DIR"/*.json data/
           rm -rf "$TMP_DATA_DIR"
 
-          # Add .gitattributes first to ensure LFS tracking is configured
-          git add .gitattributes
-
-          # Add and commit the data files (they will be automatically added to LFS)
+          # Add and commit the data files
           git add data/*.json
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            # Note: JSON files are now stored in Git LFS for efficient handling
-            # LFS stores file pointers in Git and actual content in LFS storage
-            # This is more efficient for large files (typically 1-80 MB for full filesystem scans)
-            git commit -m "Update disk space reports and metadata (stored in LFS)"
+            git commit -m "Update disk space reports and metadata"
             git push origin data
           fi
