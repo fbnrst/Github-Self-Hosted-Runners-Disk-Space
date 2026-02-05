@@ -127,7 +127,7 @@ jobs:
             git rm -rf . || true
           fi
           
-          # Setup Git LFS tracking for JSON files
+          # Setup Git LFS tracking for JSON files in data directory
           echo "data/*.json filter=lfs diff=lfs merge=lfs -text" > .gitattributes
           
           # Copy data files from temp location
@@ -137,9 +137,6 @@ jobs:
           
           # Add .gitattributes first to ensure LFS tracking is configured
           git add .gitattributes
-          
-          # Track the JSON files with LFS
-          git lfs track "data/*.json"
           
           # Add and commit the data files (they will be automatically added to LFS)
           git add data/*.json

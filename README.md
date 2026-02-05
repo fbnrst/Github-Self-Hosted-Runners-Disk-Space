@@ -20,7 +20,7 @@ This repository provides automated weekly disk space analysis for GitHub Actions
 
 1. **Data Collection**: The `collect-disk-space.yml` workflow uses `ncdu` (NCurses Disk Usage) to scan the filesystem on both x86_64 and aarch64 runners
 2. **Metadata Generation**: Lightweight metadata files are automatically generated from full reports for fast page loading
-3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to a separate `data` branch using Git LFS (Large File Storage) to avoid conflicts with page design changes and efficiently handle large files
+3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to a separate `data` branch to avoid conflicts with page design changes. Git LFS (Large File Storage) is used to efficiently handle large files.
 4. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory (excluding data files)
 5. **Visualization**: An interactive HTML page displays the data with expandable tree views and lazy-loaded details by fetching from the `data` branch
 
