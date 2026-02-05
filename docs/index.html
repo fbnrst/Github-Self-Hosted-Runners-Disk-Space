@@ -582,7 +582,9 @@
                 const meta = item[0];
                 if (typeof meta === 'object' && meta.name) {
                     const name = meta.name;
-                    // Use cached size if available, otherwise calculate
+                    // Use cached size (set by sortFullEntries).
+                    // Fallback to calculateEntrySize should never be hit in practice
+                    // since sortFullEntries is always called before rendering.
                     const size = meta._cachedSize !== undefined ? meta._cachedSize : calculateEntrySize(item);
                     const hasChildren = item.length > 1;
 
@@ -635,7 +637,8 @@
             } else if (typeof item === 'object' && item.name) {
                 // File entry (not a directory)
                 const name = item.name;
-                // Use cached size if available, otherwise calculate from asize + dsize
+                // Use cached size (set by sortFullEntries).
+                // For file entries, asize + dsize is correct as files have no children.
                 const size = item._cachedSize !== undefined ? item._cachedSize : ((item.asize || 0) + (item.dsize || 0));
                 content += `<span class="tree-item-dir">${name}</span>`;
                 content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
