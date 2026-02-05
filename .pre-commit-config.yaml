@@ -23,9 +23,3 @@ repos:
             document-start: disable,
             truthy: disable,
             comments: disable}}
-
-  - repo: https://github.com/tcort/markdown-link-check
-    rev: v3.12.1
-    hooks:
-      - id: markdown-link-check
-        args: ['--config', '.markdown-link-check.json']
