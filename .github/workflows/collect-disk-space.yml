@@ -97,6 +97,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Store the data files temporarily
+          TMP_DATA_DIR=$(mktemp -d)
+          cp -r docs/data/*.json "$TMP_DATA_DIR/" || {
+            echo "Error: No data files found in docs/data/"
+            exit 1
+          }
+          
           # Fetch data branch or create it if it doesn't exist
           git fetch origin data || true
           
@@ -104,19 +111,19 @@ jobs:
           if git ls-remote --heads origin data | grep -q data; then
             # Data branch exists, check it out
             git checkout data
-            # Remove all files and copy new data
+            # Remove all tracked files (git rm only removes tracked files, not .git)
             git rm -rf . || true
-            mkdir -p data
-            cp docs/data/*.json data/
           else
             # Create new orphan data branch (no history)
             git checkout --orphan data
-            # Remove all files from staging
+            # Remove all files from staging (git rm only removes from index/staging)
             git rm -rf . || true
-            # Create data directory and copy files
-            mkdir -p data
-            cp docs/data/*.json data/
           fi
+          
+          # Copy data files from temp location
+          mkdir -p data
+          cp "$TMP_DATA_DIR"/*.json data/
+          rm -rf "$TMP_DATA_DIR"
           
           # Add and commit the data files
           git add data/*.json
