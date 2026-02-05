@@ -14,13 +14,15 @@ This repository provides automated weekly disk space analysis for GitHub Actions
 - 🌐 **Interactive Web Interface**: Beautiful GitHub Pages site to visualize disk usage
 - 📈 **Tree View**: Browse disk usage in an interactive tree structure
 - 🎯 **Summary Statistics**: Quick overview of total and average disk usage
+- ⚡ **Fast Page Load**: Optimized with lazy loading - loads only metadata initially (~1KB) and fetches full data on-demand
 
 ## How It Works
 
 1. **Data Collection**: The `collect-disk-space.yml` workflow uses `ncdu` (NCurses Disk Usage) to scan the filesystem on both x86_64 and aarch64 runners
-2. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to the repository
-3. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory
-4. **Visualization**: An interactive HTML page displays the data with expandable tree views
+2. **Metadata Generation**: Lightweight metadata files are automatically generated from full reports for fast page loading
+3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to the repository
+4. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory
+5. **Visualization**: An interactive HTML page displays the data with expandable tree views and lazy-loaded details
 
 ## Workflows
 
@@ -32,7 +34,8 @@ The data collection workflow (`collect-disk-space.yml`) runs weekly to gather di
 - **Process**:
   1. Runs ncdu on x86_64 and aarch64 runners in parallel
   2. Generates JSON reports with metadata
-  3. Commits reports to `docs/data/` directory
+  3. Creates lightweight metadata files for fast page loading
+  4. Commits reports to `docs/data/` directory
 
 ### Pages Deployment Workflow
 
@@ -112,10 +115,15 @@ The hooks will automatically check:
 │       └── deploy-pages.yml                # GitHub Pages deployment workflow
 ├── .pre-commit-config.yaml                 # Pre-commit hooks configuration
 ├── docs/
-│   ├── index.html                          # GitHub Pages viewer
+│   ├── index.html                          # GitHub Pages viewer (with lazy loading)
 │   └── data/                               # Generated disk space reports
-│       ├── x86_64.json
-│       └── aarch64.json
+│       ├── x86_64.json                     # Full NCDU data (~56MB)
+│       ├── x86_64-metadata.json            # Lightweight metadata (~600 bytes)
+│       ├── aarch64.json                    # Full NCDU data (~24MB)
+│       └── aarch64-metadata.json           # Lightweight metadata (~600 bytes)
+├── scripts/
+│   ├── generate-metadata.py               # Metadata extraction script
+│   └── README.md                           # Scripts documentation
 └── README.md
 ```
 
