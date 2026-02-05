@@ -672,7 +672,7 @@
                     // Build disk space info string
                     let diskSpaceInfo = '';
                     if (totalDiskSize > 0) {
-                        diskSpaceInfo = `<span>Used: ${formatBytes(usedSpace)} / ${formatBytes(totalDiskSize)}</span>`;
+                        diskSpaceInfo = `<span>Used: ${formatBytes(usedSpace)}</span>`;
                         if (availableSpace > 0) {
                             diskSpaceInfo += `<span>Free: ${formatBytes(availableSpace)}</span>`;
                         }
