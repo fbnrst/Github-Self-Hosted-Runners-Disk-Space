@@ -20,7 +20,7 @@ This repository provides automated weekly disk space analysis for GitHub Actions
 
 1. **Data Collection**: The `collect-disk-space.yml` workflow uses `ncdu` (NCurses Disk Usage) to scan the filesystem on both x86_64 and aarch64 runners
 2. **Metadata Generation**: Lightweight metadata files are automatically generated from full reports for fast page loading
-3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to a separate `data` branch to avoid conflicts with page design changes. Git LFS (Large File Storage) is used to efficiently handle large files.
+3. **Data Storage**: Results are exported to JSON format with metadata (timestamp, architecture, runner type) and committed to a separate `data` branch to avoid conflicts with page design changes
 4. **Page Deployment**: The `deploy-pages.yml` workflow automatically deploys updates to GitHub Pages when changes are made to the `docs/` directory (excluding data files)
 5. **Visualization**: An interactive HTML page displays the data with expandable tree views and lazy-loaded details by fetching from the `data` branch
 
@@ -35,7 +35,7 @@ The data collection workflow (`collect-disk-space.yml`) runs weekly to gather di
   1. Runs ncdu on x86_64 and aarch64 runners in parallel
   2. Generates JSON reports with metadata
   3. Creates lightweight metadata files for fast page loading
-  4. Commits reports to a separate `data` branch using Git LFS for efficient large file storage
+  4. Commits reports to a separate `data` branch
 
 ### Pages Deployment Workflow
 
@@ -127,10 +127,9 @@ The hooks will automatically check:
 ### Data Branch (Separate, No History)
 ```
 data/
-├── .gitattributes                  # Git LFS configuration
-├── x86_64.json                     # Full NCDU data (~56MB, stored in LFS)
+├── x86_64.json                     # Full NCDU data (~56MB)
 ├── x86_64-metadata.json            # Lightweight metadata (~600 bytes)
-├── aarch64.json                    # Full NCDU data (~24MB, stored in LFS)
+├── aarch64.json                    # Full NCDU data (~24MB)
 ├── aarch64-metadata.json           # Lightweight metadata (~600 bytes)
 └── ... (other architecture data files)
 ```
@@ -139,12 +138,6 @@ The `data` branch is an orphan branch that stores only the latest version of dat
 - Avoid merge conflicts with page design PRs
 - Keep the main branch history clean
 - Reduce repository size (no data file history)
-- Use Git LFS for efficient storage of large JSON files
-
-**Git LFS (Large File Storage)**: The data branch uses Git LFS to efficiently store large JSON files. The actual file content is stored in LFS storage, while Git stores only small pointer files. This provides:
-- Faster cloning and fetching (downloads pointers initially, actual files on-demand)
-- Efficient handling of large files (200MB+ total data)
-- Better repository performance
 
 ## License
 
