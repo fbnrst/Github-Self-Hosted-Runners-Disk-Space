@@ -1,5 +1,10 @@
 # GitHub Self-Hosted Runners Disk Space
 
+[![Collect Disk Space Data](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/collect-disk-space.yml/badge.svg)](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/collect-disk-space.yml)
+[![Deploy GitHub Pages](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/fbnrst/Github-Self-Hosted-Runners-Disk-Space/actions/workflows/deploy-pages.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/fbnrst/Github-Self-Hosted-Runners-Disk-Space/main.svg)](https://results.pre-commit.ci/latest/github/fbnrst/Github-Self-Hosted-Runners-Disk-Space/main)
+[![Last Data Update](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Ffbnrst%2FGithub-Self-Hosted-Runners-Disk-Space%2Fmain%2Fdocs%2Fdata%2Fx86_64.json&query=%24.timestamp&label=Last%20ncdu%20run&color=blue)](https://fbnrst.github.io/Github-Self-Hosted-Runners-Disk-Space/)
+
 This repository provides automated weekly disk space analysis for GitHub Actions runners on different architectures (x86_64 and aarch64).
 
 ## Features
