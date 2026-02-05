@@ -27,26 +27,51 @@ def extract_entry_info(entry, max_depth=1, current_depth=0):
     return result
 
 
-def get_entry_size(entry):
+def get_entry_size(entry, seen_inodes=None):
     """Calculate total size of an NCDU entry.
 
     In NCDU format, directory metadata contains only the inode size.
     We need to recursively sum all children to get the total size.
+
+    Hard links (files with the same inode) are only counted once to avoid
+    overestimation of disk usage.
+
+    Args:
+        entry: The NCDU entry to calculate size for
+        seen_inodes: Set of inodes already counted (used internally for recursion)
+
+    Returns:
+        Total size in bytes
     """
+    if seen_inodes is None:
+        seen_inodes = set()
+
     if isinstance(entry, dict):
-        # File entry: just return asize + dsize
+        # File entry: check for hard links
+        ino = entry.get('ino')
+        if ino is not None:
+            # This file has an inode number
+            if ino in seen_inodes:
+                # Already counted this inode (hard link)
+                return 0
+            # Mark this inode as seen
+            seen_inodes.add(ino)
+
+        # Return asize + dsize
         return entry.get('asize', 0) + entry.get('dsize', 0)
     elif isinstance(entry, list) and len(entry) >= 1:
         # Entry is [metadata, children...]
         total_size = 0
         if isinstance(entry[0], dict):
-            # Add the directory/file's own size (inode)
+            # Add the directory/file's own size (metadata)
+            # Note: We don't check inode for directories as they typically don't
+            # participate in hard linking, and skipping children would be incorrect
             total_size += entry[0].get('asize', 0) + entry[0].get('dsize', 0)
 
         # Recursively add all children's sizes
         for i in range(1, len(entry)):
             child = entry[i]
-            total_size += get_entry_size(child)
+            total_size += get_entry_size(child, seen_inodes)
 
         return total_size
     return 0
@@ -81,6 +106,10 @@ def generate_metadata(input_file, output_file, top_entries=20):
                 metadata["total_size"] = total_size
 
             # Get top N child entries (starting from index 1)
+            # Note: Each entry gets its own seen_inodes set, so sizes represent
+            # the apparent size of each entry independently. This means the sum
+            # of top entries may exceed total_size if there are hard links between
+            # top-level entries, which is expected behavior for showing per-directory stats.
             top_level_entries = []
             count = 0
             for i in range(1, min(len(root_entry), top_entries + 1)):
@@ -91,6 +120,7 @@ def generate_metadata(input_file, output_file, top_entries=20):
                     entry_meta = entry[0]
                     if isinstance(entry_meta, dict):
                         name = entry_meta.get('name', 'unknown')
+                        # Each top-level entry gets its own inode set to show independent size
                         size = get_entry_size(entry)
                         has_children = len(entry) > 1
                         top_level_entries.append([size, name, has_children])
@@ -98,7 +128,8 @@ def generate_metadata(input_file, output_file, top_entries=20):
                 elif isinstance(entry, dict):
                     # Entry is just metadata (file, not directory)
                     name = entry.get('name', 'unknown')
-                    size = entry.get('asize', 0) + entry.get('dsize', 0)
+                    # Each file gets its own calculation
+                    size = get_entry_size(entry)
                     top_level_entries.append([size, name, False])
                     count += 1
 
