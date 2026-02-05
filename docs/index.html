@@ -211,6 +211,11 @@
             return null;
         }
 
+        // Configuration constants
+        const MAX_AUTO_CALC_DEPTH = 2; // Max depth for automatic size calculation
+        const MAX_VISIBLE_ITEMS = 50; // Maximum items to display per directory
+        const SIZE_CALC_DELAY_MS = 100; // Delay before calculating total size to avoid blocking
+
         // Cache for calculated sizes
         const sizeCache = new WeakMap();
 
@@ -255,15 +260,18 @@
                 const hasChildren = item.length > 1;
                 
                 // For performance, don't calculate size for deeply nested items
-                const size = skipSizeCalc || level > 2 ? 0 : calculateSize(item);
+                const size = skipSizeCalc || level > MAX_AUTO_CALC_DEPTH ? 0 : calculateSize(item);
 
                 if (hasChildren) {
                     content += `<span class="expandable">`;
                 }
 
                 content += `<span class="tree-item-dir">📁 ${name}</span>`;
-                if (size > 0 || !skipSizeCalc) {
-                    content += `<span class="tree-item-size">${size > 0 ? formatBytes(size) : '...'}</span>`;
+                // Show size if calculated, or placeholder if skipped
+                if (!skipSizeCalc && size > 0) {
+                    content += `<span class="tree-item-size">${formatBytes(size)}</span>`;
+                } else if (!skipSizeCalc) {
+                    content += `<span class="tree-item-size">...</span>`;
                 }
 
                 if (hasChildren) {
@@ -381,28 +389,27 @@
                     // Render tree - show children of root directory
                     const treeView = document.getElementById(`tree-${data.architecture}`);
                     const children = rootEntry.slice(1); // Skip root metadata
-                    const maxItems = 50;
                     
                     // Render items immediately
-                    children.slice(0, maxItems).forEach(entry => {
+                    children.slice(0, MAX_VISIBLE_ITEMS).forEach(entry => {
                         renderTreeItem(entry, 0, treeView, false);
                     });
 
-                    if (children.length > maxItems) {
+                    if (children.length > MAX_VISIBLE_ITEMS) {
                         const moreDiv = document.createElement('div');
                         moreDiv.className = 'tree-item';
-                        moreDiv.innerHTML = `<em>... ${children.length - maxItems} more items</em>`;
+                        moreDiv.innerHTML = `<em>... ${children.length - MAX_VISIBLE_ITEMS} more items</em>`;
                         treeView.appendChild(moreDiv);
                     }
                     
-                    // Calculate total size asynchronously
+                    // Calculate total size asynchronously to avoid blocking the UI
                     setTimeout(() => {
                         const rootSize = calculateSize(rootEntry);
                         const totalEl = document.getElementById(`total-${data.architecture}`);
                         if (totalEl) {
                             totalEl.innerHTML = `Total: ${formatBytes(rootSize)}`;
                         }
-                    }, 100);
+                    }, SIZE_CALC_DELAY_MS);
                 });
 
                 if (latestTimestamp) {
