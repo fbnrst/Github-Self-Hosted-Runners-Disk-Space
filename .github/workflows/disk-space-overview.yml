@@ -1,0 +1,110 @@
+name: Disk Space Overview
+
+on:
+  schedule:
+    # Run every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  collect-disk-space-x86:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ncdu
+        run: sudo apt-get update && sudo apt-get install -y ncdu
+
+      - name: Generate disk space report
+        run: |
+          # Create output directory
+          mkdir -p disk-reports
+          
+          # Run ncdu and export to JSON
+          # We'll scan the root directory (excluding some large directories)
+          sudo ncdu / -o disk-reports/x86_64-raw.json -x --exclude /proc --exclude /sys --exclude /dev --exclude /run --exclude /tmp || true
+          
+          # Add metadata
+          echo "{" > disk-reports/x86_64.json
+          echo "  \"architecture\": \"x86_64\"," >> disk-reports/x86_64.json
+          echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> disk-reports/x86_64.json
+          echo "  \"runner\": \"ubuntu-latest\"," >> disk-reports/x86_64.json
+          echo "  \"data\": $(cat disk-reports/x86_64-raw.json)" >> disk-reports/x86_64.json
+          echo "}" >> disk-reports/x86_64.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-report-x86_64
+          path: disk-reports/x86_64.json
+
+  collect-disk-space-arm64:
+    runs-on: ubuntu-latest-arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ncdu
+        run: sudo apt-get update && sudo apt-get install -y ncdu
+
+      - name: Generate disk space report
+        run: |
+          # Create output directory
+          mkdir -p disk-reports
+          
+          # Run ncdu and export to JSON
+          sudo ncdu / -o disk-reports/aarch64-raw.json -x --exclude /proc --exclude /sys --exclude /dev --exclude /run --exclude /tmp || true
+          
+          # Add metadata
+          echo "{" > disk-reports/aarch64.json
+          echo "  \"architecture\": \"aarch64\"," >> disk-reports/aarch64.json
+          echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> disk-reports/aarch64.json
+          echo "  \"runner\": \"ubuntu-latest-arm64\"," >> disk-reports/aarch64.json
+          echo "  \"data\": $(cat disk-reports/aarch64-raw.json)" >> disk-reports/aarch64.json
+          echo "}" >> disk-reports/aarch64.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-report-aarch64
+          path: disk-reports/aarch64.json
+
+  publish-to-pages:
+    needs: [collect-disk-space-x86, collect-disk-space-arm64]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download x86_64 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-x86_64
+          path: docs/data
+
+      - name: Download aarch64 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-aarch64
+          path: docs/data
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
