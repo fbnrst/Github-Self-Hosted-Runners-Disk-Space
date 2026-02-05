@@ -30,9 +30,11 @@ def extract_entry_info(entry, max_depth=1, current_depth=0):
 def get_entry_size(entry, seen_inodes=None):
     """Calculate total size of an NCDU entry.
 
-    In NCDU format, directory metadata contains only the inode size.
-    We need to recursively sum all children to get the total size.
-
+    According to NCDU documentation:
+    - For files: dsize represents the disk usage (allocated blocks)
+    - For directories: The metadata dict contains only the directory inode size
+      (typically 4096 bytes). The total directory size is the sum of all children.
+    
     Hard links (files with the same inode) are only counted once to avoid
     overestimation of disk usage.
 
@@ -41,7 +43,7 @@ def get_entry_size(entry, seen_inodes=None):
         seen_inodes: Set of inodes already counted (used internally for recursion)
 
     Returns:
-        Total size in bytes
+        Total disk usage in bytes (using dsize field)
     """
     if seen_inodes is None:
         seen_inodes = set()
@@ -57,18 +59,15 @@ def get_entry_size(entry, seen_inodes=None):
             # Mark this inode as seen
             seen_inodes.add(ino)
 
-        # Return asize + dsize
-        return entry.get('asize', 0) + entry.get('dsize', 0)
+        # Return dsize (disk usage) only, not asize + dsize
+        return entry.get('dsize', 0)
     elif isinstance(entry, list) and len(entry) >= 1:
-        # Entry is [metadata, children...]
+        # Directory entry: [metadata, children...]
+        # According to ncdu format, directory size = sum of children only
+        # The metadata dict contains only the directory inode size, not the total
         total_size = 0
-        if isinstance(entry[0], dict):
-            # Add the directory/file's own size (metadata)
-            # Note: We don't check inode for directories as they typically don't
-            # participate in hard linking, and skipping children would be incorrect
-            total_size += entry[0].get('asize', 0) + entry[0].get('dsize', 0)
 
-        # Recursively add all children's sizes
+        # Sum only children's sizes, not the directory metadata
         for i in range(1, len(entry)):
             child = entry[i]
             total_size += get_entry_size(child, seen_inodes)
