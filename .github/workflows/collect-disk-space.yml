@@ -88,6 +88,10 @@ jobs:
           name: disk-report-x86_64-slim
           path: docs/data
 
+      - name: Generate metadata files
+        run: |
+          python3 scripts/generate-metadata.py
+
       - name: Commit and push reports
         run: |
           git config user.name "github-actions[bot]"
@@ -101,6 +105,6 @@ jobs:
             # NCDU JSON format is relatively compact, but scanning entire filesystems
             # including /proc, /sys can generate large files. Consider using --exclude
             # for very large directories if files exceed ~50 MB to stay well under limits.
-            git commit -m "Update disk space reports"
+            git commit -m "Update disk space reports and metadata"
             git push
           fi
