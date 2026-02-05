@@ -29,7 +29,7 @@ This repository provides automated weekly disk space analysis for GitHub Actions
 The data collection workflow (`collect-disk-space.yml`) runs weekly to gather disk usage information:
 - **Schedule**: Every Monday at 00:00 UTC
 - **Trigger**: Can also be manually triggered via `workflow_dispatch`
-- **Process**: 
+- **Process**:
   1. Runs ncdu on x86_64 and aarch64 runners in parallel
   2. Generates JSON reports with metadata
   3. Commits reports to `docs/data/` directory
