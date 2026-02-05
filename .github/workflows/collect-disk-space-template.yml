@@ -1,0 +1,53 @@
+name: Collect Disk Space Template
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: 'The runner to use (e.g., ubuntu-24.04 or ubuntu-24.04-arm)'
+        required: true
+        type: string
+      architecture:
+        description: 'The architecture name (e.g., x86_64 or aarch64)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  collect-disk-space:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ncdu
+        run: sudo apt-get update && sudo apt-get install -y ncdu
+
+      - name: Generate disk space report
+        run: |
+          # Create output directory
+          mkdir -p docs/data
+
+          # Run ncdu and export to JSON
+          sudo ncdu / -o docs/data/${{ inputs.architecture }}-raw.json -x || true
+
+          # Add metadata
+          echo "{" > docs/data/${{ inputs.architecture }}.json
+          echo "  \"architecture\": \"${{ inputs.architecture }}\"," >> docs/data/${{ inputs.architecture }}.json
+          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "  \"timestamp\": \"$timestamp\"," >> docs/data/${{ inputs.architecture }}.json
+          echo "  \"runner\": \"${{ inputs.runner }}\"," >> docs/data/${{ inputs.architecture }}.json
+          data=$(cat docs/data/${{ inputs.architecture }}-raw.json)
+          echo "  \"data\": $data" >> docs/data/${{ inputs.architecture }}.json
+          echo "}" >> docs/data/${{ inputs.architecture }}.json
+
+          # Remove raw file
+          rm docs/data/${{ inputs.architecture }}-raw.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: disk-report-${{ inputs.architecture }}
+          path: docs/data/${{ inputs.architecture }}.json

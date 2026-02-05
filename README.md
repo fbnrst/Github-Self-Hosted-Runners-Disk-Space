@@ -107,12 +107,13 @@ The hooks will automatically check:
 .
 ├── .github/
 │   └── workflows/
-│       ├── collect-disk-space.yml    # Data collection workflow (weekly)
-│       └── deploy-pages.yml          # GitHub Pages deployment workflow
-├── .pre-commit-config.yaml           # Pre-commit hooks configuration
+│       ├── collect-disk-space.yml          # Data collection workflow (weekly)
+│       ├── collect-disk-space-template.yml # Reusable workflow template
+│       └── deploy-pages.yml                # GitHub Pages deployment workflow
+├── .pre-commit-config.yaml                 # Pre-commit hooks configuration
 ├── docs/
-│   ├── index.html                     # GitHub Pages viewer
-│   └── data/                          # Generated disk space reports
+│   ├── index.html                          # GitHub Pages viewer
+│   └── data/                               # Generated disk space reports
 │       ├── x86_64.json
 │       └── aarch64.json
 └── README.md

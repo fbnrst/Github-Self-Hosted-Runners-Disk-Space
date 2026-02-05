@@ -11,80 +11,42 @@ permissions:
 
 jobs:
   collect-disk-space-x86:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install ncdu
-        run: sudo apt-get update && sudo apt-get install -y ncdu
-
-      - name: Generate disk space report
-        run: |
-          # Create output directory
-          mkdir -p docs/data
-
-          # Run ncdu and export to JSON
-          sudo ncdu / -o docs/data/x86_64-raw.json -x || true
-
-          # Add metadata
-          echo "{" > docs/data/x86_64.json
-          echo "  \"architecture\": \"x86_64\"," >> docs/data/x86_64.json
-          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "  \"timestamp\": \"$timestamp\"," >> docs/data/x86_64.json
-          echo "  \"runner\": \"ubuntu-24.04\"," >> docs/data/x86_64.json
-          data=$(cat docs/data/x86_64-raw.json)
-          echo "  \"data\": $data" >> docs/data/x86_64.json
-          echo "}" >> docs/data/x86_64.json
-
-          # Remove raw file
-          rm docs/data/x86_64-raw.json
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: disk-report-x86_64
-          path: docs/data/x86_64.json
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-24.04
+      architecture: x86_64
 
   collect-disk-space-arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-24.04-arm
+      architecture: aarch64
 
-      - name: Install ncdu
-        run: sudo apt-get update && sudo apt-get install -y ncdu
+  collect-disk-space-22-04-arm:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-22.04-arm
+      architecture: aarch64-22.04
 
-      - name: Generate disk space report
-        run: |
-          # Create output directory
-          mkdir -p docs/data
+  collect-disk-space-22-04:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-22.04
+      architecture: x86_64-22.04
 
-          # Run ncdu and export to JSON
-          sudo ncdu / -o docs/data/aarch64-raw.json -x || true
-
-          # Add metadata
-          echo "{" > docs/data/aarch64.json
-          echo "  \"architecture\": \"aarch64\"," >> docs/data/aarch64.json
-          timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "  \"timestamp\": \"$timestamp\"," >> docs/data/aarch64.json
-          runner="ubuntu-24.04-arm"
-          echo "  \"runner\": \"$runner\"," >> docs/data/aarch64.json
-          data=$(cat docs/data/aarch64-raw.json)
-          echo "  \"data\": $data" >> docs/data/aarch64.json
-          echo "}" >> docs/data/aarch64.json
-
-          # Remove raw file
-          rm docs/data/aarch64-raw.json
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: disk-report-aarch64
-          path: docs/data/aarch64.json
+  collect-disk-space-slim:
+    uses: ./.github/workflows/collect-disk-space-template.yml
+    with:
+      runner: ubuntu-slim
+      architecture: x86_64-slim
 
   commit-reports:
-    needs: [collect-disk-space-x86, collect-disk-space-arm64]
+    needs:
+      - collect-disk-space-x86
+      - collect-disk-space-arm64
+      - collect-disk-space-22-04-arm
+      - collect-disk-space-22-04
+      - collect-disk-space-slim
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -100,6 +62,24 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: disk-report-aarch64
+          path: docs/data
+
+      - name: Download aarch64-22.04 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-aarch64-22.04
+          path: docs/data
+
+      - name: Download x86_64-22.04 report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-x86_64-22.04
+          path: docs/data
+
+      - name: Download x86_64-slim report
+        uses: actions/download-artifact@v4
+        with:
+          name: disk-report-x86_64-slim
           path: docs/data
 
       - name: Commit and push reports
