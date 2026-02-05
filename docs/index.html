@@ -277,6 +277,8 @@
         let sortListenersInitialized = false;
 
         // All runners to display
+        // Note: Architecture identifiers must match the filenames in the data branch
+        // (e.g., 'x86_64-slim' corresponds to x86_64-slim.json and x86_64-slim-metadata.json)
         const RUNNERS = [
             { architecture: 'x86_64', title: 'x86_64 (Intel/AMD) - Ubuntu 24.04' },
             { architecture: 'aarch64', title: 'aarch64 (ARM64) - Ubuntu 24.04' },
@@ -617,7 +619,12 @@
 
                     const reportCard = document.createElement('div');
                     reportCard.className = 'report-card';
+                    // Store architecture for use in reloadExpandedViews when sort order changes
                     reportCard.dataset.architecture = runner.architecture;
+                    // Add accessibility attributes
+                    reportCard.setAttribute('role', 'button');
+                    reportCard.setAttribute('aria-expanded', 'false');
+                    reportCard.setAttribute('tabindex', '0');
 
                     const totalSize = data.total_size || 0;
 
@@ -643,29 +650,41 @@
                     `;
 
                     // Add click handler to toggle expansion
-                    reportCard.addEventListener('click', function(e) {
+                    const toggleCard = function(e) {
                         // Don't toggle if clicking inside tree view
                         if (e.target.closest('.tree-view')) {
                             return;
                         }
 
-                        const wasExpanded = this.classList.contains('expanded');
+                        const wasExpanded = reportCard.classList.contains('expanded');
 
                         // Collapse all other cards
                         document.querySelectorAll('.report-card').forEach(card => {
                             card.classList.remove('expanded');
+                            card.setAttribute('aria-expanded', 'false');
                         });
 
                         // Toggle this card
                         if (!wasExpanded) {
-                            this.classList.add('expanded');
+                            reportCard.classList.add('expanded');
+                            reportCard.setAttribute('aria-expanded', 'true');
 
                             // Load tree view if not already loaded
-                            const treeView = this.querySelector('.tree-view');
+                            const treeView = reportCard.querySelector('.tree-view');
                             if (treeView && treeView.dataset.loaded !== 'true') {
                                 renderTreeView(treeView, data);
                                 treeView.dataset.loaded = 'true';
                             }
+                        }
+                    };
+
+                    reportCard.addEventListener('click', toggleCard);
+
+                    // Add keyboard support for accessibility
+                    reportCard.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleCard(e);
                         }
                     });
 
