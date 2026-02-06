@@ -794,8 +794,8 @@
                     const totalSize = data.total_size || 0;
                     const totalDiskSize = data.total_disk_size || 0;
                     const availableSpace = data.available_space || 0;
-                    // Prevent negative used space (can occur with disk quotas or timing differences)
-                    const usedSpace = Math.max(0, totalDiskSize - availableSpace);
+                    // Used space is the analyzed disk usage (total_size)
+                    const usedSpace = totalSize;
 
                     if (!latestTimestamp || new Date(data.timestamp) > new Date(latestTimestamp)) {
                         latestTimestamp = data.timestamp;
@@ -817,7 +817,7 @@
                                 <div class="report-meta">
                                     <span>Runner: ${data.runner}</span>
                                     <span>Updated: ${formatDate(data.timestamp)}</span>
-                                    <span>Total: ${formatBytes(totalSize)}</span>
+                                    <span>Total: ${formatBytes(totalDiskSize)}</span>
                                     ${diskSpaceInfo}
                                 </div>
                             </div>
