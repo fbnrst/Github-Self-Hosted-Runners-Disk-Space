@@ -831,9 +831,9 @@
                     // Add click handler to toggle expansion
                     const toggleCard = function(e) {
                         // Don't toggle if clicking on interactive elements within tree view
-                        // Check for expandable items, links, and buttons for future-proofing
+                        // Check for expandable items, tree items (including files), links, and buttons
                         const target = e.target;
-                        if (target.closest('.expandable') || target.closest('a') || target.closest('button')) {
+                        if (target.closest('.expandable') || target.closest('.tree-item') || target.closest('a') || target.closest('button')) {
                             return;
                         }
 
